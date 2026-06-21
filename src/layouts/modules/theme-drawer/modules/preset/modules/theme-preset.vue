@@ -87,7 +87,7 @@ const applyPreset = (preset: ThemePreset): void => {
   themeStore.setGrayscale(grayscale);
   themeStore.setColourWeakness(colourWeakness);
   themeStore.setThemeLayout(layout.mode);
-  themeStore.setWatermarkEnableUserName(watermark.enableUserName);
+  themeStore.setWatermarkEnableusername(watermark.enableusername);
   themeStore.setWatermarkEnableTime(watermark.enableTime);
 
   Object.assign(themeStore, {

@@ -1,6 +1,6 @@
 const local: App.I18n.Schema = {
   system: {
-    title: 'Soybean 管理系统',
+    title: 'EasyEscm 管理系统',
     updateTitle: '系统版本更新通知',
     updateContent: '检测到系统有新版本发布，是否立即刷新页面？',
     updateConfirm: '立即刷新',
@@ -199,7 +199,7 @@ const local: App.I18n.Schema = {
         title: '水印设置',
         visible: '显示全屏水印',
         text: '自定义水印文本',
-        enableUserName: '启用用户名水印',
+        enableusername: '启用用户名水印',
         enableTime: '显示当前时间',
         timeFormat: '时间格式'
       },
@@ -231,7 +231,7 @@ const local: App.I18n.Schema = {
     login: {
       common: {
         loginOrRegister: '登录 / 注册',
-        userNamePlaceholder: '请输入用户名',
+        usernamePlaceholder: '请输入用户名',
         phonePlaceholder: '请输入手机号',
         codePlaceholder: '请输入验证码',
         passwordPlaceholder: '请输入密码',
@@ -241,7 +241,7 @@ const local: App.I18n.Schema = {
         back: '返回',
         validateSuccess: '验证成功',
         loginSuccess: '登录成功',
-        welcomeBack: '欢迎回来，{userName} ！'
+        welcomeBack: '欢迎回来，{username} ！'
       },
       pwdLogin: {
         title: '密码登录',
@@ -277,7 +277,7 @@ const local: App.I18n.Schema = {
     home: {
       branchDesc:
         '为了方便大家开发和更新合并，我们对main分支的代码进行了精简，只保留了首页菜单，其余内容已移至example分支进行维护。预览地址显示的内容即为example分支的内容。',
-      greeting: '早安，{userName}, 今天又是充满活力的一天!',
+      greeting: '早安，{username}, 今天又是充满活力的一天!',
       weatherDesc: '今日多云转晴，20℃ - 25℃!',
       projectCount: '项目数',
       todo: '待办',
@@ -306,7 +306,7 @@ const local: App.I18n.Schema = {
   },
   form: {
     required: '不能为空',
-    userName: {
+    username: {
       required: '请输入用户名',
       invalid: '用户名格式不正确'
     },

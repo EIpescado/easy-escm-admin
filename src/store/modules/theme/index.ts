@@ -76,8 +76,8 @@ export const useThemeStore = defineStore(SetupStoreId.Theme, () => {
   const watermarkContent = computed(() => {
     const { watermark } = settings.value;
 
-    if (watermark.enableUserName && authStore.userInfo.userName) {
-      return authStore.userInfo.userName;
+    if (watermark.enableusername && authStore.userInfo.nickname) {
+      return authStore.userInfo.nickname;
     }
 
     if (watermark.enableTime) {
@@ -180,8 +180,8 @@ export const useThemeStore = defineStore(SetupStoreId.Theme, () => {
    *
    * @param enable Whether to enable user name watermark
    */
-  function setWatermarkEnableUserName(enable: boolean) {
-    settings.value.watermark.enableUserName = enable;
+  function setWatermarkEnableusername(enable: boolean) {
+    settings.value.watermark.enableusername = enable;
 
     if (enable) {
       settings.value.watermark.enableTime = false;
@@ -197,7 +197,7 @@ export const useThemeStore = defineStore(SetupStoreId.Theme, () => {
     settings.value.watermark.enableTime = enable;
 
     if (enable) {
-      settings.value.watermark.enableUserName = false;
+      settings.value.watermark.enableusername = false;
     }
   }
 
@@ -295,7 +295,7 @@ export const useThemeStore = defineStore(SetupStoreId.Theme, () => {
     toggleThemeScheme,
     updateThemeColors,
     setThemeLayout,
-    setWatermarkEnableUserName,
+    setWatermarkEnableusername,
     setWatermarkEnableTime,
     setNaiveThemeOverrides
   };

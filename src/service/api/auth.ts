@@ -3,23 +3,36 @@ import { request } from '../request';
 /**
  * Login
  *
- * @param userName User name
+ * @param username User name
  * @param password Password
  */
-export function fetchLogin(userName: string, password: string) {
+export function fetchLogin(username: string, password: string) {
   return request<Api.Auth.LoginToken>({
     url: '/auth/login',
     method: 'post',
     data: {
-      userName,
-      password
+      username,
+      password,
+      clientId: 'escm-pc-api',
+      grantType: 'password',
+      orgCode: 'HFY'
     }
   });
 }
 
 /** Get user info */
 export function fetchGetUserInfo() {
-  return request<Api.Auth.UserInfo>({ url: '/auth/getUserInfo' });
+  return request<Api.Auth.UserInfo>({ url: '/user/info' });
+}
+
+/**
+ * 登出
+ */
+export function fetchLogout() {
+  return request<void>({
+    url: '/auth/logout',
+    method: 'post'
+  });
 }
 
 /**

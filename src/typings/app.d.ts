@@ -120,7 +120,7 @@ declare namespace App {
         /** Watermark text */
         text: string;
         /** Whether to use user name as watermark text */
-        enableUserName: boolean;
+        enableusername: boolean;
         /** Whether to use current time as watermark text */
         enableTime: boolean;
         /** Time format for watermark text */
@@ -459,7 +459,7 @@ declare namespace App {
             title: string;
             visible: string;
             text: string;
-            enableUserName: string;
+            enableusername: string;
             enableTime: string;
             timeFormat: string;
           };
@@ -484,7 +484,7 @@ declare namespace App {
         login: {
           common: {
             loginOrRegister: string;
-            userNamePlaceholder: string;
+            usernamePlaceholder: string;
             phonePlaceholder: string;
             codePlaceholder: string;
             passwordPlaceholder: string;
@@ -558,7 +558,7 @@ declare namespace App {
       };
       form: {
         required: string;
-        userName: FormMsg;
+        username: FormMsg;
         phone: FormMsg;
         pwd: FormMsg;
         confirmPwd: FormMsg;
@@ -642,9 +642,9 @@ declare namespace App {
       /** The backend service response code */
       code: string;
       /** The backend service response message */
-      msg: string;
+      message: string;
       /** The backend service response data */
-      data: T;
+      res: T;
     };
 
     /** The demo backend service response data */
