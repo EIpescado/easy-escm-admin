@@ -345,6 +345,7 @@ declare namespace App {
         lookForward: string;
         modify: string;
         modifySuccess: string;
+        more: string;
         noData: string;
         operate: string;
         pleaseCheckValue: string;
@@ -367,7 +368,6 @@ declare namespace App {
         logoutMsg: string;
         logoutWithModal: string;
         logoutWithModalMsg: string;
-        refreshToken: string;
         tokenExpired: string;
       };
       theme: {
@@ -501,11 +501,7 @@ declare namespace App {
             rememberMe: string;
             forgetPassword: string;
             register: string;
-            otherAccountLogin: string;
             otherLoginMode: string;
-            superAdmin: string;
-            admin: string;
-            user: string;
           };
           codeLogin: {
             title: string;
@@ -525,6 +521,50 @@ declare namespace App {
           };
           bindWeChat: {
             title: string;
+          };
+        };
+        manage: {
+          user: {
+            username: string;
+            nickname: string;
+            phone: string;
+            mail: string;
+            role: string;
+            stateLabel: string;
+            lastLoginTime: string;
+            resetPassword: string;
+            resetPasswordConfirm: string;
+            state: {
+              normal: string;
+              forbidden: string;
+              notActivated: string;
+            };
+          };
+          role: {
+            roleCode: string;
+            roleName: string;
+            remark: string;
+            stateLabel: string;
+            menuAuth: string;
+            menuAuthSuccess: string;
+            state: {
+              on: string;
+              off: string;
+            };
+          };
+          menu: {
+            parent: string;
+            name: string;
+            title: string;
+            path: string;
+            component: string;
+            icon: string;
+            order: string;
+            cached: string;
+            hidden: string;
+            root: string;
+            iconPlaceholder: string;
+            componentPlaceholder: string;
           };
         };
         home: {
@@ -613,9 +653,6 @@ declare namespace App {
 
   /** Service namespace */
   namespace Service {
-    /** Other baseURL key */
-    type OtherBaseURLKey = 'demo';
-
     interface ServiceConfigItem {
       /** The backend service base url */
       baseURL: string;
@@ -623,19 +660,8 @@ declare namespace App {
       proxyPattern: string;
     }
 
-    interface OtherServiceConfigItem extends ServiceConfigItem {
-      key: OtherBaseURLKey;
-    }
-
     /** The backend service config */
-    interface ServiceConfig extends ServiceConfigItem {
-      /** Other backend service config */
-      other: OtherServiceConfigItem[];
-    }
-
-    interface SimpleServiceConfig extends Pick<ServiceConfigItem, 'baseURL'> {
-      other: Record<OtherBaseURLKey, string>;
-    }
+    type ServiceConfig = ServiceConfigItem;
 
     /** The backend service response data */
     type Response<T = unknown> = {
@@ -645,16 +671,6 @@ declare namespace App {
       message: string;
       /** The backend service response data */
       res: T;
-    };
-
-    /** The demo backend service response data */
-    type DemoResponse<T = unknown> = {
-      /** The backend service response code */
-      status: string;
-      /** The backend service response message */
-      message: string;
-      /** The backend service response data */
-      result: T;
     };
   }
 }

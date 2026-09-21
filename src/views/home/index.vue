@@ -1,46 +1,45 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useAppStore } from '@/store/modules/app';
 import HeaderBanner from './modules/header-banner.vue';
 import CardData from './modules/card-data.vue';
 import LineChart from './modules/line-chart.vue';
 import PieChart from './modules/pie-chart.vue';
 import ProjectNews from './modules/project-news.vue';
 import CreativityBanner from './modules/creativity-banner.vue';
-
-const appStore = useAppStore();
-
-const gap = computed(() => (appStore.isMobile ? 0 : 16));
 </script>
 
 <template>
-  <NSpace vertical :size="16">
-    <NAlert :title="$t('common.tip')" type="warning">
-      {{ $t('page.home.branchDesc') }}
-    </NAlert>
-    <HeaderBanner />
-    <CardData />
-    <NGrid :x-gap="gap" :y-gap="16" responsive="screen" item-responsive>
-      <NGi span="24 s:24 m:14">
-        <NCard :bordered="false" class="card-wrapper">
-          <LineChart />
-        </NCard>
-      </NGi>
-      <NGi span="24 s:24 m:10">
-        <NCard :bordered="false" class="card-wrapper">
-          <PieChart />
-        </NCard>
-      </NGi>
-    </NGrid>
-    <NGrid :x-gap="gap" :y-gap="16" responsive="screen" item-responsive>
-      <NGi span="24 s:24 m:14">
+  <div class="home-dashboard flex flex-col gap-16px">
+    <HeaderBanner class="shrink-0" />
+    <CardData class="shrink-0" />
+    <div class="min-h-[240px] flex flex-1 gap-16px lt-lg:flex-col">
+      <div class="min-h-0 min-w-0 flex-[7] lt-lg:min-h-[220px]">
+        <LineChart />
+      </div>
+      <div class="min-h-0 min-w-0 flex-[5] lt-lg:min-h-[220px]">
+        <PieChart />
+      </div>
+    </div>
+    <div class="min-h-[220px] flex flex-1 gap-16px lt-lg:flex-col">
+      <div class="min-h-0 min-w-0 flex-[7] lt-lg:min-h-[200px]">
         <ProjectNews />
-      </NGi>
-      <NGi span="24 s:24 m:10">
+      </div>
+      <div class="min-h-0 min-w-0 flex-[5] lt-lg:min-h-[200px]">
         <CreativityBanner />
-      </NGi>
-    </NGrid>
-  </NSpace>
+      </div>
+    </div>
+  </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.home-dashboard {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* on short screens, allow the page to scroll instead of squeezing the cards */
+@media (max-height: 900px) {
+  .home-dashboard {
+    overflow-y: auto;
+  }
+}
+</style>

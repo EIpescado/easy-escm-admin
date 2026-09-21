@@ -32,7 +32,8 @@ const local: App.I18n.Schema = {
     logoutConfirm: 'Are you sure you want to log out?',
     lookForward: 'Coming soon',
     modify: 'Modify',
-    modifySuccess: 'Modify Success',
+    modifySuccess: 'Modified successfully',
+    more: 'More',
     noData: 'No Data',
     operate: 'Operate',
     pleaseCheckValue: 'Please check whether the value is valid',
@@ -55,7 +56,6 @@ const local: App.I18n.Schema = {
     logoutMsg: 'User status is invalid, please log in again',
     logoutWithModal: 'Pop up modal after request failed and then log out user',
     logoutWithModalMsg: 'User status is invalid, please log in again',
-    refreshToken: 'The requested token has expired, refresh the token',
     tokenExpired: 'The requested token has expired'
   },
   theme: {
@@ -226,10 +226,14 @@ const local: App.I18n.Schema = {
   route: {
     login: 'Login',
     403: 'No Permission',
-    404: 'Page Not Found',
+    404: 'Not Found',
     500: 'Server Error',
-    'iframe-page': 'Iframe',
-    home: 'Home'
+    'iframe-page': 'Iframe Page',
+    home: 'Home',
+    manage: 'System',
+    manage_user: 'User',
+    manage_role: 'Role',
+    manage_menu: 'Menu'
   },
   page: {
     login: {
@@ -252,11 +256,7 @@ const local: App.I18n.Schema = {
         rememberMe: 'Remember me',
         forgetPassword: 'Forget password?',
         register: 'Register',
-        otherAccountLogin: 'Other Account Login',
-        otherLoginMode: 'Other Login Mode',
-        superAdmin: 'Super Admin',
-        admin: 'Admin',
-        user: 'User'
+        otherLoginMode: 'Other Login Mode'
       },
       codeLogin: {
         title: 'Verification Code Login',
@@ -275,7 +275,51 @@ const local: App.I18n.Schema = {
         title: 'Reset Password'
       },
       bindWeChat: {
-        title: 'Bind WeChat'
+        title: 'WeChat Login'
+      }
+    },
+    manage: {
+      user: {
+        username: 'Username',
+        nickname: 'Nickname',
+        phone: 'Phone',
+        mail: 'Email',
+        role: 'Role',
+        stateLabel: 'Status',
+        lastLoginTime: 'Last Login Time',
+        resetPassword: 'Reset Password',
+        resetPasswordConfirm: 'Reset this user password to the default one?',
+        state: {
+          normal: 'Normal',
+          forbidden: 'Disabled',
+          notActivated: 'Not Activated'
+        }
+      },
+      role: {
+        roleCode: 'Role Code',
+        roleName: 'Role Name',
+        remark: 'Remark',
+        stateLabel: 'Status',
+        menuAuth: 'Menu Auth',
+        menuAuthSuccess: 'Authorized successfully',
+        state: {
+          on: 'Enabled',
+          off: 'Disabled'
+        }
+      },
+      menu: {
+        parent: 'Parent Menu',
+        name: 'Route Name',
+        title: 'Menu Title',
+        path: 'Route Path',
+        component: 'Component',
+        icon: 'Icon',
+        order: 'Order',
+        cached: 'Keep Alive',
+        hidden: 'Hidden',
+        root: 'Root',
+        iconPlaceholder: 'Iconify icon name, e.g. mdi:home',
+        componentPlaceholder: 'e.g. layout.base or view.manage_user'
       }
     },
     home: {

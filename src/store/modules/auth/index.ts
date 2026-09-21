@@ -30,7 +30,13 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
     clientId: '',
     deviceType: '',
     roles: [],
-    buttons: []
+    buttons: [],
+    org: {
+      id: '',
+      code: '',
+      name: '',
+      state: 1
+    }
   });
 
   /** is super role in static route */
@@ -136,7 +142,6 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   async function loginByToken(loginToken: Api.Auth.LoginToken) {
     // 1. stored in the localStorage, the later requests need it in headers
     localStg.set('token', loginToken.accessToken);
-    localStg.set('refreshToken', loginToken.refreshToken);
 
     // 2. get user info
     const pass = await getUserInfo();
@@ -151,11 +156,16 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   }
 
   async function getUserInfo() {
-    const { data: info, error } = await fetchGetUserInfo();
+    const { data: context, error } = await fetchGetUserInfo();
 
     if (!error) {
-      // update store
-      Object.assign(userInfo, info);
+      const { user, roles, org } = context;
+
+      Object.assign(userInfo, user, {
+        roles: roles || [],
+        buttons: [],
+        org: org || { id: '', code: '', name: '', state: 1 }
+      });
 
       return true;
     }

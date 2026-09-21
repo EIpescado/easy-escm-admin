@@ -144,8 +144,8 @@ init();
 </script>
 
 <template>
-  <NCard :bordered="false" class="card-wrapper">
-    <div ref="domRef" class="h-360px overflow-hidden"></div>
+  <NCard :bordered="false" class="h-full card-wrapper">
+    <div ref="domRef" class="h-full min-h-0 overflow-hidden"></div>
   </NCard>
 </template>
 

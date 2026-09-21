@@ -22,18 +22,25 @@ const newses = computed<NewsItem[]>(() => [
 </script>
 
 <template>
-  <NCard :title="$t('page.home.projectNews.title')" :bordered="false" size="small" segmented class="card-wrapper">
+  <NCard
+    :title="$t('page.home.projectNews.title')"
+    :bordered="false"
+    size="small"
+    class="h-full card-wrapper"
+    :header-style="{ padding: '8px 16px' }"
+    :content-style="{ padding: 0, overflow: 'auto', minHeight: 0 }"
+  >
     <template #header-extra>
-      <a class="text-primary" href="javascript:;">{{ $t('page.home.projectNews.moreNews') }}</a>
+      <a class="text-primary text-14px" href="javascript:;">{{ $t('page.home.projectNews.moreNews') }}</a>
     </template>
-    <NList>
-      <NListItem v-for="item in newses" :key="item.id">
-        <template #prefix>
-          <SoybeanAvatar class="size-48px!" />
-        </template>
-        <NThing :title="item.content" :description="item.time" />
-      </NListItem>
-    </NList>
+    <div
+      v-for="item in newses"
+      :key="item.id"
+      class="h-34px flex-y-center justify-between gap-12px px-16px transition-colors hover:bg-#f5f5f5 dark:hover:bg-#2a2a2a"
+    >
+      <span class="min-w-0 flex-1 truncate">{{ item.content }}</span>
+      <span class="shrink-0 text-#999 text-13px">{{ item.time }}</span>
+    </div>
   </NCard>
 </template>
 

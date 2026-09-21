@@ -33,6 +33,7 @@ const local: App.I18n.Schema = {
     lookForward: '敬请期待',
     modify: '修改',
     modifySuccess: '修改成功',
+    more: '更多',
     noData: '无数据',
     operate: '操作',
     pleaseCheckValue: '请检查输入的值是否合法',
@@ -55,7 +56,6 @@ const local: App.I18n.Schema = {
     logoutMsg: '用户状态失效，请重新登录',
     logoutWithModal: '请求失败后弹出模态框再登出用户',
     logoutWithModalMsg: '用户状态失效，请重新登录',
-    refreshToken: '请求的token已过期，刷新token',
     tokenExpired: 'token已过期'
   },
   theme: {
@@ -225,7 +225,11 @@ const local: App.I18n.Schema = {
     404: '页面不存在',
     500: '服务器错误',
     'iframe-page': '外链页面',
-    home: '首页'
+    home: '首页',
+    manage: '系统管理',
+    manage_user: '用户管理',
+    manage_role: '角色管理',
+    manage_menu: '菜单管理'
   },
   page: {
     login: {
@@ -248,11 +252,7 @@ const local: App.I18n.Schema = {
         rememberMe: '记住我',
         forgetPassword: '忘记密码？',
         register: '注册账号',
-        otherAccountLogin: '其他账号登录',
-        otherLoginMode: '其他登录方式',
-        superAdmin: '超级管理员',
-        admin: '管理员',
-        user: '普通用户'
+        otherLoginMode: '其他登录方式'
       },
       codeLogin: {
         title: '验证码登录',
@@ -271,7 +271,51 @@ const local: App.I18n.Schema = {
         title: '重置密码'
       },
       bindWeChat: {
-        title: '绑定微信'
+        title: '微信登录'
+      }
+    },
+    manage: {
+      user: {
+        username: '用户名',
+        nickname: '昵称',
+        phone: '手机号',
+        mail: '邮箱',
+        role: '角色',
+        stateLabel: '状态',
+        lastLoginTime: '最后登录时间',
+        resetPassword: '重置密码',
+        resetPasswordConfirm: '确认将该用户密码重置为默认密码？',
+        state: {
+          normal: '正常',
+          forbidden: '禁用',
+          notActivated: '未激活'
+        }
+      },
+      role: {
+        roleCode: '角色编码',
+        roleName: '角色名称',
+        remark: '备注',
+        stateLabel: '状态',
+        menuAuth: '菜单授权',
+        menuAuthSuccess: '授权成功',
+        state: {
+          on: '启用',
+          off: '禁用'
+        }
+      },
+      menu: {
+        parent: '上级菜单',
+        name: '路由名称',
+        title: '菜单标题',
+        path: '路由地址',
+        component: '组件路径',
+        icon: '图标',
+        order: '排序',
+        cached: '页面缓存',
+        hidden: '隐藏菜单',
+        root: '根目录',
+        iconPlaceholder: '请输入 Iconify 图标名，如 mdi:home',
+        componentPlaceholder: '如 layout.base 或 view.manage_user'
       }
     },
     home: {

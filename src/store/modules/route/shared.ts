@@ -2,6 +2,7 @@ import type { RouteLocationNormalizedLoaded, RouteRecordRaw, _RouteRecordBase } 
 import type { ElegantConstRoute, LastLevelRouteKey, RouteKey, RouteMap } from '@elegant-router/types';
 import { isDev } from '@/constants/env';
 import { useSvgIcon } from '@/hooks/common/icon';
+import { views as elegantViews } from '@/router/elegant/imports';
 import { $t } from '@/locales';
 
 /**
@@ -108,6 +109,67 @@ export function sortRoutesByOrder(routes: ElegantConstRoute[]) {
   routes.forEach(sortRouteByOrder);
 
   return routes;
+}
+
+/**
+ * Whether the route component is implemented in the front-end
+ *
+ * The backend menu may reference views that are not implemented yet (e.g. `view.manage_user-detail`),
+ * those routes are skipped to avoid elegant-router throwing.
+ *
+ * @param component route component, e.g. `layout.base`, `view.manage_user`, `layout.base$view.home`
+ */
+function isRouteComponentExist(component: string) {
+  if (!component) return false;
+
+  return component.split('$').every(part => {
+    if (part.startsWith('layout.')) {
+      return ['base', 'blank'].includes(part.replace('layout.', ''));
+    }
+
+    if (part.startsWith('view.')) {
+      const key = part.replace('view.', '');
+
+      return Boolean((elegantViews as Record<string, unknown>)[key]);
+    }
+
+    return true;
+  });
+}
+
+/**
+ * Transform the backend menu tree to elegant routes
+ *
+ * @param nodes Backend menu tree nodes (from `/menu/tree`)
+ */
+export function transformMenuTreeToRoutes(nodes: Api.SystemManage.MenuNode[]): ElegantConstRoute[] {
+  return nodes
+    .filter(node => Boolean(node.name && node.component))
+    .filter(node => {
+      if (isRouteComponentExist(node.component)) return true;
+
+      // eslint-disable-next-line no-console
+      console.warn(`[route] skip menu "${node.name}": view component "${node.component}" not found`);
+
+      return false;
+    })
+    .map(node => {
+      const children = node.children?.length ? transformMenuTreeToRoutes(node.children) : [];
+
+      const route = {
+        name: node.name,
+        path: node.path,
+        component: node.component,
+        props: node.props || undefined,
+        meta: {
+          ...node.meta,
+          title: node.meta?.title || node.name
+        },
+        children: children.length ? children : undefined
+      };
+
+      return route as unknown as ElegantConstRoute;
+    });
 }
 
 /**
