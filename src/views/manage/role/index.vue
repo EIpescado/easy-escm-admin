@@ -4,11 +4,13 @@ import { NButton, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { fetchRoleList } from '@/service/api';
-import { roleStateRecord } from '@/constants/business';
+import { roleStateOptions, roleStateRecord } from '@/constants/business';
+import { translateOptions } from '@/utils/common';
 import { getTableOperateColumnWidth } from '@/utils/table';
 import { $t } from '@/locales';
 import TableRowOperation from '@/components/advanced/table-row-operation.vue';
-import RoleSearch from './modules/role-search.vue';
+import QueryFilter from '@/components/advanced/query-filter/index.vue';
+import { toQueryItems, type QueryField, type QueryFilterCondition } from '@/components/advanced/query-filter/types';
 import RoleOperateModal from './modules/role-operate-modal.vue';
 import MenuAuthModal from './modules/menu-auth-modal.vue';
 
@@ -16,15 +18,37 @@ defineOptions({
   name: 'ManageRole'
 });
 
-const searchForm = reactive<Api.SystemManage.RoleSearchModel>({
-  roleCode: '',
-  roleName: ''
-});
+const searchFields = computed<QueryField[]>(() => [
+  {
+    prop: 'roleCode',
+    label: $t('page.manage.role.roleCode'),
+    valueType: 'text',
+    defaultType: 'like',
+    types: ['like']
+  },
+  {
+    prop: 'roleName',
+    label: $t('page.manage.role.roleName'),
+    valueType: 'text',
+    defaultType: 'like',
+    types: ['like']
+  },
+  {
+    prop: 'state',
+    label: $t('page.manage.role.stateLabel'),
+    valueType: 'select',
+    defaultType: 'eq',
+    types: ['eq'],
+    options: translateOptions(roleStateOptions)
+  }
+]);
+
+const searchConditions = ref<QueryFilterCondition[]>([]);
 
 const params = reactive<Api.SystemManage.PageQo>({
   page: 1,
   size: 10,
-  keyword: ''
+  items: []
 });
 
 function getOperateOptions(_row: Api.SystemManage.Role) {
@@ -39,7 +63,7 @@ const operateColumnWidth = computed(() =>
 );
 
 const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
-  api: () => fetchRoleList({ page: params.page, size: params.size, keyword: params.keyword }),
+  api: () => fetchRoleList({ page: params.page, size: params.size, items: params.items }),
   transform: response => {
     const { data: resData, error } = response;
 
@@ -121,15 +145,16 @@ function handleRowAction(row: Api.SystemManage.Role, key: string) {
 }
 
 function handleSearch() {
-  params.keyword = searchForm.roleCode || searchForm.roleName;
+  params.items = toQueryItems(searchConditions.value);
   params.page = 1;
 
   getDataByPage(1);
 }
 
+/** Reset only restores the query params to default, without sending a request */
 function handleReset() {
-  Object.assign(searchForm, { roleCode: '', roleName: '' });
-  handleSearch();
+  params.items = [];
+  params.page = 1;
 }
 
 async function handleSubmitted() {
@@ -144,7 +169,13 @@ async function handleAuthSubmitted() {
 
 <template>
   <div class="min-h-0 flex flex-1 flex-col gap-16px overflow-hidden">
-    <RoleSearch v-model:model="searchForm" class="shrink-0" @search="handleSearch" @reset="handleReset" />
+    <QueryFilter
+      v-model="searchConditions"
+      :fields="searchFields"
+      class="shrink-0"
+      @search="handleSearch"
+      @reset="handleReset"
+    />
     <NCard :bordered="false" size="small" class="min-h-0 flex-1 card-wrapper">
       <template #header>
         <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData">

@@ -287,6 +287,7 @@ const local: App.I18n.Schema = {
         role: 'Role',
         stateLabel: 'Status',
         lastLoginTime: 'Last Login Time',
+        registerTime: 'Register Time',
         resetPassword: 'Reset Password',
         resetPasswordConfirm: 'Reset this user password to the default one?',
         state: {
@@ -406,6 +407,34 @@ const local: App.I18n.Schema = {
       left: 'Left Fixed',
       right: 'Right Fixed',
       unFixed: 'Unfixed'
+    }
+  },
+  queryFilter: {
+    add: 'Add condition',
+    showMore: 'Expand',
+    showLess: 'Collapse',
+    empty: 'No conditions yet, click "Add condition" to start',
+    shortcut: {
+      today: 'Today',
+      thisWeek: 'This Week',
+      thisMonth: 'This Month',
+      thisYear: 'This Year',
+      lastYear: 'Last Year',
+      last30Days: 'Last 30 Days',
+      recentYear: 'Last 12 Months'
+    },
+    operator: {
+      eq: 'Equals',
+      ne: 'Not equal',
+      like: 'Contains',
+      notLike: 'Not contains',
+      gt: 'Greater than',
+      ge: 'Not less than',
+      lt: 'Less than',
+      le: 'Not greater than',
+      between: 'Between',
+      in: 'In',
+      notIn: 'Not in'
     }
   }
 };

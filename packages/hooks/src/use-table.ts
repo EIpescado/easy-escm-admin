@@ -61,6 +61,12 @@ export interface UseTableOptions<ResponseData, ApiData, Column, Pagination exten
    * @default true
    */
   immediate?: boolean;
+  /**
+   * minimum loading duration in ms, avoids loading flicker
+   *
+   * @default 0
+   */
+  delay?: number;
 }
 
 export default function useTable<ResponseData, ApiData, Column, Pagination extends boolean>(
@@ -69,7 +75,17 @@ export default function useTable<ResponseData, ApiData, Column, Pagination exten
   const { loading, startLoading, endLoading } = useLoading();
   const { bool: empty, setBool: setEmpty } = useBoolean();
 
-  const { api, pagination, transform, columns, getColumnChecks, getColumns, onFetched, immediate = true } = options;
+  const {
+    api,
+    pagination,
+    transform,
+    columns,
+    getColumnChecks,
+    getColumns,
+    onFetched,
+    immediate = true,
+    delay = 0
+  } = options;
 
   const data = ref([]) as Ref<ApiData[]>;
 
@@ -94,7 +110,11 @@ export default function useTable<ResponseData, ApiData, Column, Pagination exten
     try {
       startLoading();
 
-      const response = await api();
+      // keep the loading state for at least `delay` ms to avoid loading flicker
+      const [response] = await Promise.all([
+        api(),
+        delay > 0 ? new Promise(resolve => setTimeout(resolve, delay)) : Promise.resolve(null)
+      ]);
 
       const transformed = transform(response);
 

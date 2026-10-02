@@ -532,6 +532,7 @@ declare namespace App {
             role: string;
             stateLabel: string;
             lastLoginTime: string;
+            registerTime: string;
             resetPassword: string;
             resetPasswordConfirm: string;
             state: {
@@ -624,6 +625,34 @@ declare namespace App {
           left: string;
           right: string;
           unFixed: string;
+        };
+      };
+      queryFilter: {
+        add: string;
+        showMore: string;
+        showLess: string;
+        empty: string;
+        shortcut: {
+          today: string;
+          thisWeek: string;
+          thisMonth: string;
+          thisYear: string;
+          lastYear: string;
+          last30Days: string;
+          recentYear: string;
+        };
+        operator: {
+          eq: string;
+          ne: string;
+          like: string;
+          notLike: string;
+          gt: string;
+          ge: string;
+          lt: string;
+          le: string;
+          between: string;
+          in: string;
+          notIn: string;
         };
       };
     };

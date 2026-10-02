@@ -34,6 +34,7 @@ export function useNaiveTable<ResponseData, ApiData>(options: UseNaiveTableOptio
 
   const result = useTable<ResponseData, ApiData, NaiveUI.TableColumn<ApiData>, false>({
     ...options,
+    delay: options.delay ?? 600,
     getColumnChecks: cols => getColumnChecks(cols, options.getColumnVisible),
     getColumns
   });
@@ -126,12 +127,15 @@ export function useNaivePaginatedTable<ResponseData, ApiData>(
 
   const result = useTable<ResponseData, ApiData, NaiveUI.TableColumn<ApiData>, true>({
     ...options,
+    delay: options.delay ?? 600,
     pagination: true,
     getColumnChecks: cols => getColumnChecks(cols, options.getColumnVisible),
     getColumns,
     onFetched: data => {
-      pagination.itemCount = data.total;
-      pagination.pageSize = data.pageSize;
+      // Only sync the total. Do NOT assign `pageSize` from the response: that would mutate
+      // `pagination`, trip the `paginationParams` watcher below and fire a duplicate request
+      // (the backend may return `size` as a string, which is never strictly equal to a number).
+      pagination.itemCount = Number(data.total) || 0;
     }
   });
 

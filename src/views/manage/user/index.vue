@@ -1,36 +1,44 @@
 <script setup lang="ts">
-import { computed, h, reactive } from 'vue';
+import { computed, h, reactive, ref } from 'vue';
 import { NButton, NTag } from 'naive-ui';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { fetchResetUserPassword, fetchToggleUserState, fetchUserDetail, fetchUserList } from '@/service/api';
-import { userStateRecord } from '@/constants/business';
+import { userStateOptions, userStateRecord } from '@/constants/business';
+import { translateOptions } from '@/utils/common';
 import { getTableOperateColumnWidth } from '@/utils/table';
 import { $t } from '@/locales';
 import TableRowOperation from '@/components/advanced/table-row-operation.vue';
-import UserSearch from './modules/user-search.vue';
+import QueryFilter from '@/components/advanced/query-filter/index.vue';
+import { toQueryItems, type QueryField, type QueryFilterCondition } from '@/components/advanced/query-filter/types';
 import UserOperateModal from './modules/user-operate-modal.vue';
 
 defineOptions({
   name: 'ManageUser'
 });
 
-const searchForm = reactive<Api.SystemManage.UserSearchModel>({
-  username: '',
-  nickname: '',
-  phone: '',
-  state: null
-});
+const searchFields = computed<QueryField[]>(() => [
+  { prop: 'username', label: $t('page.manage.user.username'), valueType: 'text', defaultType: 'like', types: ['like'] },
+  { prop: 'nickname', label: $t('page.manage.user.nickname'), valueType: 'text', defaultType: 'like', types: ['like'] },
+  { prop: 'phone', label: $t('page.manage.user.phone'), valueType: 'text', defaultType: 'eq', types: ['eq', 'like'] },
+  { prop: 'mail', label: $t('page.manage.user.mail'), valueType: 'text', defaultType: 'like' },
+  {
+    prop: 'registerTime',
+    label: $t('page.manage.user.registerTime'),
+    valueType: 'date',
+    defaultType: 'between',
+    types: ['between', 'ge', 'le', 'eq']
+  },
+  {
+    prop: 'state',
+    label: $t('page.manage.user.stateLabel'),
+    valueType: 'select',
+    defaultType: 'eq',
+    types: ['eq'],
+    options: translateOptions(userStateOptions)
+  }
+]);
 
-function buildItems() {
-  const items: Api.SystemManage.QueryItem[] = [];
-
-  if (searchForm.username) items.push({ prop: 'username', values: [searchForm.username], type: 'like' });
-  if (searchForm.nickname) items.push({ prop: 'nickname', values: [searchForm.nickname], type: 'like' });
-  if (searchForm.phone) items.push({ prop: 'phone', values: [searchForm.phone], type: 'like' });
-  if (searchForm.state) items.push({ prop: 'state', values: [searchForm.state], type: 'eq' });
-
-  return items;
-}
+const searchConditions = ref<QueryFilterCondition[]>([]);
 
 const params = reactive<Api.SystemManage.PageQo>({
   page: 1,
@@ -99,6 +107,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
         return h(NTag, { type, size: 'small', bordered: false }, { default: () => $t(userStateRecord[row.stateEnum]) });
       }
     },
+    { key: 'registerTime', title: $t('page.manage.user.registerTime'), align: 'center', minWidth: 170 },
     { key: 'lastLoginTime', title: $t('page.manage.user.lastLoginTime'), align: 'center', minWidth: 170 }
   ],
   onPaginationParamsChange: paginationParams => {
@@ -140,15 +149,16 @@ async function handleEditUser(id: string) {
 }
 
 function handleSearch() {
-  params.items = buildItems();
+  params.items = toQueryItems(searchConditions.value);
   params.page = 1;
 
   getDataByPage(1);
 }
 
+/** Reset only restores the query params to default, without sending a request */
 function handleReset() {
-  Object.assign(searchForm, { username: '', nickname: '', phone: '', state: null });
-  handleSearch();
+  params.items = [];
+  params.page = 1;
 }
 
 async function handleResetPassword(id: string) {
@@ -204,7 +214,13 @@ async function handleSubmitted() {
 
 <template>
   <div class="min-h-0 flex flex-1 flex-col gap-16px overflow-hidden">
-    <UserSearch v-model:model="searchForm" class="shrink-0" @search="handleSearch" @reset="handleReset" />
+    <QueryFilter
+      v-model="searchConditions"
+      :fields="searchFields"
+      class="shrink-0"
+      @search="handleSearch"
+      @reset="handleReset"
+    />
     <NCard :bordered="false" size="small" class="min-h-0 flex-1 card-wrapper">
       <template #header>
         <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData">

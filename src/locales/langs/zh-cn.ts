@@ -283,6 +283,7 @@ const local: App.I18n.Schema = {
         role: '角色',
         stateLabel: '状态',
         lastLoginTime: '最后登录时间',
+        registerTime: '注册时间',
         resetPassword: '重置密码',
         resetPasswordConfirm: '确认将该用户密码重置为默认密码？',
         state: {
@@ -402,6 +403,34 @@ const local: App.I18n.Schema = {
       left: '左固定',
       right: '右固定',
       unFixed: '取消固定'
+    }
+  },
+  queryFilter: {
+    add: '添加条件',
+    showMore: '展开',
+    showLess: '折叠',
+    empty: '暂无查询条件，点击「添加条件」开始',
+    shortcut: {
+      today: '今天',
+      thisWeek: '本周',
+      thisMonth: '本月',
+      thisYear: '今年',
+      lastYear: '去年',
+      last30Days: '最近三十天',
+      recentYear: '最近一年'
+    },
+    operator: {
+      eq: '等于',
+      ne: '不等于',
+      like: '包含',
+      notLike: '不包含',
+      gt: '大于',
+      ge: '不小于',
+      lt: '小于',
+      le: '不大于',
+      between: '介于',
+      in: '属于',
+      notIn: '不属于'
     }
   }
 };

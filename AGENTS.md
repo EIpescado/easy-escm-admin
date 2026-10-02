@@ -1,53 +1,70 @@
-# SoybeanAdmin — 智能体指南
+# SoybeanAdmin (easy-escm) — 智能体指南
 
-本项目是 SoybeanAdmin v2.2.0（上游：`soybeanjs/soybean-admin`），一个基于 Vue 3 / Vite 8 / TypeScript / NaiveUI / UnoCSS 的后台管理模板。
+本项目是 [SoybeanAdmin](https://github.com/soybeanjs/soybean-admin) v2.2.0 的分支（上游包名仍为 `soybean-admin`），技术上基于 Vue 3 / Vite 8 / TypeScript / NaiveUI / UnoCSS，但已改造为 **easy-escm** 管理后台：接入真实认证、**后端动态菜单**与用户/角色/菜单管理页。改动集中在 `src/service/api/`、`src/store/modules/{auth,route}/`、`src/views/manage/`。不要按原版模板的默认行为假设。
 
 ## 快速命令
 
-| 操作           | 命令                                                            |
-| -------------- | --------------------------------------------------------------- |
-| 启动开发服务器 | `pnpm dev`（mode=test，端口 19527）                             |
-| 启动生产模式   | `pnpm dev:prod`                                                 |
-| 构建生产       | `pnpm build`                                                    |
-| 构建测试       | `pnpm build:test`                                               |
-| 类型检查       | `pnpm typecheck`（即 `vue-tsc --noEmit --skipLibCheck`）        |
-| 代码检查       | `pnpm lint`（即 `oxlint --fix && eslint --fix .`）              |
-| 格式化         | `pnpm fmt`（即 `oxfmt`）                                        |
-| 提交           | `pnpm commit`（通过 `sa git-commit` 生成 Conventional Commits） |
-| 预览构建产物   | `pnpm preview`（端口 9725）                                     |
+| 操作                | 命令                                                   |
+| ------------------- | ------------------------------------------------------ |
+| 启动开发(mode=test) | `pnpm dev`（端口 19527，自动打开浏览器）               |
+| 启动生产模式        | `pnpm dev:prod`                                        |
+| 构建生产 / 测试     | `pnpm build` / `pnpm build:test`                       |
+| 类型检查            | `pnpm typecheck`（`vue-tsc --noEmit --skipLibCheck`）  |
+| 代码检查            | `pnpm lint`（`oxlint --fix && eslint --fix .`）        |
+| 格式化              | `pnpm fmt`（`oxfmt`）                                  |
+| 预览构建产物        | `pnpm preview`（端口 19725）                           |
+| 重新生成路由        | `pnpm gen-route`                                       |
+| 提交                | `pnpm commit`（`sa git-commit`，Conventional Commits） |
 
-提交前钩子顺序：`typecheck -> lint -> fmt -> git diff --exit-code`。
+- **没有测试框架，也没有 `pnpm test`**。验证手段是 `pnpm typecheck` + `pnpm lint` + 手动跑 dev server。
+- pre-commit 钩子顺序：`typecheck -> lint -> fmt -> git diff --exit-code`。若代码未格式化会使提交失败，提交前先跑 `pnpm fmt`。
+
+## 后端依赖（重要）
+
+- 接口地址由 `.env.test` / `.env.prod` 的 `VITE_SERVICE_BASE_URL` 决定：开发默认 `http://localhost:39999`，生产为 Apifox mock（`.env` 为公共配置，两个 mode 文件只覆盖该项）。
+- 开发时 `VITE_HTTP_PROXY=Y`，请求经 Vite 代理 `/proxy-default`（见 `build/config/proxy.ts`）。
+- 当前为**动态路由模式**（`.env` 的 `VITE_AUTH_ROUTE_MODE=dynamic`）：登录与菜单分别依赖后端 `/auth/login`、`/system/user/info`、`/system/menu/tree`。**后端不可用则无法进入系统**，不要误以为是前端 bug。
+- 系统管理接口统一带 `/system/` 前缀：`/system/user/**`、`/system/role/**`、`/system/menu/**`（旧的无前缀 `/user`、`/role`、`/menu` 已废弃）。
+- 响应信封 `{ code, message, res }`：`code` 等于 `VITE_SERVICE_SUCCESS_CODE`（`0`）即成功，`request` 自动解包返回 `res`（`src/service/request/index.ts`）。
+- 认证头不是 `Authorization`，而是 `VITE_AUTH_HEADER_NAME=easy-auth`，值为 `Bearer <token>`。
+
+## 动态路由 / 菜单（本分支核心）
+
+- 路由由后端 `/system/menu/tree` 返回的 `MenuNode[]` 驱动，经 `transformMenuTreeToRoutes()` 转为 Elegant 路由（`src/store/modules/route/shared.ts`）。
+- 后端菜单的 `component` 是字符串，如 `layout.base$view.manage_user`：`layout.*` 只允许 `base`/`blank`，`view.*` 必须能在 `src/views/**` 找到（组件名经 `@elegant-router/vue` 生成到 `src/router/elegant/`）。**找不到对应 view 的菜单会被跳过并打印 `[route] skip menu ...` 警告**，而非报错。
+- 因此：新增/重命名 `src/views` 下的页面后，必须让路由重新生成（dev server 会自动生成，或手动 `pnpm gen-route`），否则动态菜单解析不到该组件。
+- 菜单 i18n key 约定为 `route.<routerName>`，`MenuNode.name` 即路由名；缺少对应 `route.*` 文案时菜单会直接显示原始 key。
+- 路由含 `meta.isDev` 时仅开发环境加载（`filterRoutesByDev`，见 `src/constants/env.ts` 的 `isDev`）。
 
 ## 项目结构
 
-- **pnpm monorepo** — 工作空间包位于 `packages/*`：
-  - `@sa/scripts` — CLI 工具（`pnpm sa <cmd>`），供多数 npm scripts 使用
-  - `@sa/axios`、`@sa/alova` — 两个请求库
-  - `@sa/hooks`、`@sa/utils`、`@sa/color`、`@sa/materials`、`@sa/uno-preset` — 共享库
-- **入口文件**: `src/main.ts` — 依次引导加载、NProgress、图标、dayjs、Pinia 状态、Vue Router、i18n，最后挂载
-- **路由**: `vue-router`，默认 history 模式。路由由 `@elegant-router/vue` Vite 插件自动生成到 `src/router/elegant/`。如需重新生成，执行 `pnpm gen-route`
-- **状态管理**（Pinia）：`app`、`auth`、`route`、`tab`、`theme`，位于 `src/store/modules/`
-- **国际化**: `vue-i18n`，语言文件在 `src/locales/langs/`
-- **样式**: UnoCSS（presetWind3 + 自定义 `@sa/uno-preset`）+ SCSS（Vite 自动注入 `@use "@/styles/scss/global.scss" as *`）
-- **API 层**: `@sa/axios` 作为主请求库，`@sa/alova` 用于替代请求；开发模式下通过 `VITE_HTTP_PROXY=Y` 启用代理
-- **权限**: 默认使用静态路由模式（`VITE_AUTH_ROUTE_MODE=static`，超级角色 `R_SUPER`）
+- **pnpm monorepo**，工作空间包在 `packages/*`：`@sa/scripts`（`pnpm sa <cmd>` CLI，支撑多数 npm scripts）、`@sa/axios`（实际使用的请求库）、`@sa/hooks`/`@sa/utils`/`@sa/color`/`@sa/materials`/`@sa/uno-preset`。`packages/alova` 存在但 `src/` 未引用。
+- **入口** `src/main.ts`：bootstrap → NProgress/icons/dayjs → Pinia → Vue Router → i18n → 挂载。
+- **状态**（Pinia，`src/store/modules/`）：`app`、`auth`、`route`、`tab`、`theme`。
+- **API 层**：`src/service/request/`（axios 封装与拦截），`src/service/api/` 按模块拆分并在 `index.ts` 汇总导出；对应类型在 `src/typings/api/*.d.ts`（`Api.*` 命名空间）。
+- **国际化**：`vue-i18n`，语言文件 `src/locales/langs/{zh-cn,en-us}.ts`。
+- **样式**：UnoCSS（presetWind3 + 自定义 `@sa/uno-preset`）+ SCSS，Vite 自动注入 `@use "@/styles/scss/global.scss" as *`。
+
+## 自动生成文件（勿手改）
+
+- `src/router/elegant/{routes,imports,transform}.ts`
+- `src/typings/elegant-router.d.ts`
+- `src/typings/components.d.ts`
+
+由 `@elegant-router/vue` 和 `unplugin-vue-components` 生成，已在 `.oxfmtrc.json` 的 `ignorePatterns` 中排除。
 
 ## 工具链注意事项
 
-- **格式化器**: 使用 `oxfmt`（**不是** Prettier）。配置文件 `.oxfmtrc.json` — 单引号、无尾逗号、箭头函数单一参数不加括号、行宽 120
-- **代码检查**: 主检查器为 `oxlint`，辅以 `eslint`（使用 `@soybeanjs/eslint-config-vue` 配置）
-- **类型检查**: 使用 `vue-tsc`（不是 `tsc`）
-- **包管理器**: 必须使用 `pnpm >=10.5`（npm 或 yarn 无法运行）
-- **环境模式**: `test`（默认开发模式）和 `prod`；环境变量分别在 `.env.test` 和 `.env.prod` 中
-- **组件自动导入**: 使用 `unplugin-vue-components`，**不要手动 import 组件**
-- **图标**: 使用 `@iconify/vue` + `vite-plugin-svg-icons`；前缀 `icon-`（本地图标前缀 `icon-local-`）
-- **开发端口**: 19527，预览端口 19725
-- **自动生成文件**（请勿手动编辑）：`src/typings/components.d.ts`、`src/typings/elegant-router.d.ts`、`src/router/elegant/` 目录下的所有文件
+- **格式化器是 `oxfmt`，不是 Prettier**。`.oxfmtrc.json`：单引号、无尾逗号、箭头函数单参不加括号、行宽 120。
+- **检查器以 `oxlint` 为主、`eslint` 为辅**（`@soybeanjs/eslint-config-vue`，见 `eslint.config.js`）。
+- **类型检查用 `vue-tsc`，不是 `tsc`**。
+- **必须使用 pnpm**（monorepo；npm/yarn 无法运行；`pnpm-workspace.yaml` 设 `shamefullyHoist: true`）。Node >=20.19，pnpm >=10.5。
+- 组件自动导入：**不要手动 import 组件**。
+- 图标：`@iconify/vue` + `vite-plugin-svg-icons`；前缀 `icon-`，本地图标前缀 `icon-local-`。
+- npm 源：`.npmrc` 指向 `registry.npmmirror.com`。
 
 ## 代码规范
 
-- Vue 组件在模板中使用 PascalCase，`icon-*` 前缀的组件名不受此规则限制
-- 路径别名：`@/` 指向 `src/`，`~/` 指向项目根目录
-- Git 提交：使用 `pnpm commit`（Conventional Commits 格式）
-- 环境要求：Node >=20.19.0，pnpm >=10.5.0
-- 已配置 npm 镜像源：`.npmrc` 中设置 `registry=https://registry.npmmirror.com/`
+- 模板中组件用 PascalCase；`icon-*` 前缀组件不受此规则限制。
+- 路径别名：`@/` → `src/`，`~/` → 项目根。
+- Git 提交用 `pnpm commit`（Conventional Commits）。
