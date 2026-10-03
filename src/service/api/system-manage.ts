@@ -9,6 +9,16 @@ export function fetchUserList(params: Api.SystemManage.PageQo) {
   });
 }
 
+/** export user list as xlsx, the backend returns a file stream when `export` is true */
+export function fetchUserExport(params: Api.SystemManage.PageQo) {
+  return request<Blob, 'blob'>({
+    url: '/system/user/search',
+    method: 'post',
+    data: { ...params, export: true },
+    responseType: 'blob'
+  });
+}
+
 /** get user detail */
 export function fetchUserDetail(id: string) {
   return request<Api.SystemManage.UserForm>({ url: '/system/user/detail', method: 'post', data: { id } });
@@ -44,6 +54,16 @@ export function fetchRoleList(params: Api.SystemManage.PageQo) {
     url: '/system/role/search',
     method: 'post',
     data: params
+  });
+}
+
+/** export role list as xlsx, the backend returns a file stream when `export` is true */
+export function fetchRoleExport(params: Api.SystemManage.PageQo) {
+  return request<Blob, 'blob'>({
+    url: '/system/role/search',
+    method: 'post',
+    data: { ...params, export: true },
+    responseType: 'blob'
   });
 }
 

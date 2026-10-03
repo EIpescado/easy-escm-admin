@@ -12,7 +12,9 @@ interface Props {
   operators?: QueryOperator[];
 }
 
-defineProps<Props>();
+withDefaults(defineProps<Props>(), {
+  operators: () => []
+});
 
 const emit = defineEmits<{
   search: [];

@@ -70,6 +70,15 @@ export interface QueryFilterCondition {
   values: string[];
 }
 
+/** One sort rule edited by the query filter (backend order item + a local id) */
+export interface QuerySortItem {
+  id: string;
+  /** Backend property name */
+  prop: string;
+  /** Whether ascending */
+  asc: boolean;
+}
+
 const TEXT_OPERATORS: QueryOperator[] = ['eq', 'ne', 'like', 'notLike', 'in', 'notIn'];
 const NUMBER_OPERATORS: QueryOperator[] = ['eq', 'ne', 'gt', 'ge', 'lt', 'le', 'between', 'in', 'notIn'];
 const DATE_OPERATORS: QueryOperator[] = ['eq', 'ne', 'gt', 'ge', 'lt', 'le', 'between'];
@@ -163,4 +172,28 @@ export function toQueryItems(conditions: QueryFilterCondition[]): Api.SystemMana
     type: condition.type,
     values: normalizeValues(condition.type, condition.values).map(String)
   }));
+}
+
+let sortSeed = 0;
+
+/** Create a local unique id for a sort item */
+export function createSortId() {
+  sortSeed += 1;
+
+  return `qs-${Date.now().toString(36)}-${sortSeed}`;
+}
+
+/** Create a sort item from a field, defaulting to descending */
+export function createSortItem(field: QueryField, overrides?: Partial<QuerySortItem>): QuerySortItem {
+  return {
+    id: createSortId(),
+    prop: field.prop,
+    asc: false,
+    ...overrides
+  };
+}
+
+/** Convert the internal sort items to backend order items */
+export function toOrderItems(items: QuerySortItem[]): Api.SystemManage.OrderByItem[] {
+  return items.map(item => ({ prop: item.prop, asc: item.asc }));
 }

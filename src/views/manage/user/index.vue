@@ -1,15 +1,31 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref } from 'vue';
+import { computed, h, reactive, ref, watch } from 'vue';
 import { NButton, NTag } from 'naive-ui';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
-import { fetchResetUserPassword, fetchToggleUserState, fetchUserDetail, fetchUserList } from '@/service/api';
+import {
+  fetchResetUserPassword,
+  fetchToggleUserState,
+  fetchUserDetail,
+  fetchUserExport,
+  fetchUserList
+} from '@/service/api';
 import { userStateOptions, userStateRecord } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
-import { getTableOperateColumnWidth } from '@/utils/table';
+import { getExportItems, getTableOperateColumnWidth } from '@/utils/table';
+import { getTableSetting, setTableSetting } from '@/utils/table-settings';
 import { $t } from '@/locales';
 import TableRowOperation from '@/components/advanced/table-row-operation.vue';
+import TableExportButton from '@/components/advanced/table-export-button.vue';
 import QueryFilter from '@/components/advanced/query-filter/index.vue';
-import { toQueryItems, type QueryField, type QueryFilterCondition } from '@/components/advanced/query-filter/types';
+import QuerySortButton from '@/components/advanced/query-filter/query-sort-button.vue';
+import {
+  createSortId,
+  toOrderItems,
+  toQueryItems,
+  type QueryField,
+  type QueryFilterCondition,
+  type QuerySortItem
+} from '@/components/advanced/query-filter/types';
 import UserOperateModal from './modules/user-operate-modal.vue';
 
 defineOptions({
@@ -40,10 +56,25 @@ const searchFields = computed<QueryField[]>(() => [
 
 const searchConditions = ref<QueryFilterCondition[]>([]);
 
+/** Unique key to persist the table settings (columns & sort) */
+const TABLE_KEY = 'manage_user';
+
+/** Restore the persisted sort, then keep it in sync */
+const searchSort = ref<QuerySortItem[]>(
+  (getTableSetting(TABLE_KEY)?.orders ?? []).map(order => ({
+    id: createSortId(),
+    prop: order.prop,
+    asc: order.asc ?? true
+  }))
+);
+
+watch(searchSort, items => setTableSetting(TABLE_KEY, { orders: toOrderItems(items) }), { deep: true });
+
 const params = reactive<Api.SystemManage.PageQo>({
   page: 1,
   size: 10,
-  items: []
+  items: [],
+  orders: toOrderItems(searchSort.value)
 });
 
 function getOperateOptions(row: Api.SystemManage.User) {
@@ -67,7 +98,8 @@ const operateColumnWidth = computed(() =>
 );
 
 const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
-  api: () => fetchUserList({ page: params.page, size: params.size, items: params.items }),
+  tableKey: TABLE_KEY,
+  api: () => fetchUserList({ page: params.page, size: params.size, items: params.items, orders: params.orders }),
   transform: response => {
     const { data: resData, error } = response;
 
@@ -116,6 +148,23 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
   }
 });
 
+/** Pagination with the sort button rendered on its right (via the pagination `suffix`) */
+const tablePagination = computed(() => ({
+  ...mobilePagination.value,
+  suffix: () =>
+    h(QuerySortButton, {
+      modelValue: searchSort.value,
+      'onUpdate:modelValue': (value: QuerySortItem[]) => {
+        searchSort.value = value;
+      },
+      fields: searchFields.value,
+      onConfirm: handleSearch
+    })
+}));
+
+/** Export items follow the current column settings (checked columns, in table order) */
+const exportItems = computed(() => getExportItems(columnChecks.value));
+
 const { drawerVisible, openDrawer, closeDrawer, operateType, editingData, checkedRowKeys } = useTableOperate(
   data,
   'id',
@@ -150,6 +199,7 @@ async function handleEditUser(id: string) {
 
 function handleSearch() {
   params.items = toQueryItems(searchConditions.value);
+  params.orders = toOrderItems(searchSort.value);
   params.page = 1;
 
   getDataByPage(1);
@@ -158,7 +208,9 @@ function handleSearch() {
 /** Reset only restores the query params to default, without sending a request */
 function handleReset() {
   params.items = [];
+  params.orders = [];
   params.page = 1;
+  searchSort.value = [];
 }
 
 async function handleResetPassword(id: string) {
@@ -232,6 +284,9 @@ async function handleSubmitted() {
               {{ $t('common.add') }}
             </NButton>
           </template>
+          <template #export>
+            <TableExportButton :api="() => fetchUserExport({ ...params, exportItems })" />
+          </template>
         </TableHeaderOperation>
       </template>
       <NDataTable
@@ -240,7 +295,8 @@ async function handleSubmitted() {
         :data="data"
         :loading="loading"
         :row-key="row => row.id"
-        :pagination="mobilePagination"
+        :pagination="tablePagination"
+        :paginate-single-page="true"
         :scroll-x="900"
         remote
         flex-height

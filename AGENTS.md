@@ -19,6 +19,14 @@
 - **没有测试框架，也没有 `pnpm test`**。验证手段是 `pnpm typecheck` + `pnpm lint` + 手动跑 dev server。
 - pre-commit 钩子顺序：`typecheck -> lint -> fmt -> git diff --exit-code`。若代码未格式化会使提交失败，提交前先跑 `pnpm fmt`。
 
+## 本地验证与 dev server（重要）
+
+- **19527 是开发者（用户）手动启动的 dev server 端口，绝不要杀掉占用 19527 的进程。** 不要执行 `Get-NetTCPConnection -LocalPort 19527 | Stop-Process` 之类的"按端口杀进程"。
+- 需要浏览器验证时，**优先复用已在运行的 `http://localhost:19527`**：临时探针文件（如根目录 `preview.html` + `src/preview/`）会被该 dev server 通过 HMR 直接加载，无需另起服务。
+- 确实需要独立实例时，使用**专用端口并禁止端口回退**：`pnpm dev --port 19627 --strictPort`；收尾时只停止**自己启动的那个后台进程**（按返回的后台任务/PID），不要按端口杀。
+- 由于 Vite 在端口被占用时会自动 +1，**自己起的服务可能并不在 19527 上**；因此按固定端口杀进程极易误杀用户的 19527。任何情况下都不要这样做。
+- 验证用的临时文件（`preview.html`、`src/preview/`）**用完必须删除，且不要提交**。
+
 ## 后端依赖（重要）
 
 - 接口地址由 `.env.test` / `.env.prod` 的 `VITE_SERVICE_BASE_URL` 决定：开发默认 `http://localhost:39999`，生产为 Apifox mock（`.env` 为公共配置，两个 mode 文件只覆盖该项）。

@@ -29,12 +29,36 @@ declare namespace Api {
       alias?: string;
     }
 
+    /** dynamic sort item, aligned with backend BaseQo.OrderByItem */
+    interface OrderByItem {
+      /** entity property name, same as `QoItem.prop` */
+      prop: string;
+      /** whether ascending, `null`/`undefined` is treated as ascending */
+      asc?: boolean;
+      /** table alias */
+      alias?: string;
+    }
+
+    /** export field config, aligned with backend BaseQo.ExportItem */
+    interface ExportItem {
+      /** entity property name, same as `QoItem.prop` */
+      prop: string;
+      /** display label of the exported column */
+      label?: string;
+    }
+
     /** common page qo */
     interface PageQo {
       page: number;
       size: number;
       keyword?: string;
       items?: QueryItem[];
+      /** dynamic sort, applied in order */
+      orders?: OrderByItem[];
+      /** whether to export: the backend returns an xlsx stream instead of JSON */
+      export?: boolean;
+      /** fields to export, only valid when `export` is true */
+      exportItems?: ExportItem[];
     }
 
     /** user */

@@ -338,6 +338,7 @@ declare namespace App {
         edit: string;
         warning: string;
         error: string;
+        export: string;
         index: string;
         keywordSearch: string;
         logout: string;
@@ -632,6 +633,12 @@ declare namespace App {
         showMore: string;
         showLess: string;
         empty: string;
+        sort: string;
+        sortTip: string;
+        addSort: string;
+        sortField: string;
+        asc: string;
+        desc: string;
         shortcut: {
           today: string;
           thisWeek: string;

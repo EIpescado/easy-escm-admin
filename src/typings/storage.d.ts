@@ -37,5 +37,18 @@ declare namespace StorageType {
     };
     /** The last login user id */
     lastLoginUserId: string;
+    /**
+     * Table settings persisted by table key
+     *
+     * - `columns`: the column check state (visible / fixed / order)
+     * - `orders`: the custom sort rules
+     */
+    tableSettings: Record<
+      string,
+      {
+        columns?: { key: string; checked: boolean; fixed: 'left' | 'right' | 'unFixed' }[];
+        orders?: { prop: string; asc?: boolean }[];
+      }
+    >;
   }
 }

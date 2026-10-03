@@ -7,6 +7,7 @@ import type { FlatResponseData } from '@sa/axios';
 import { jsonClone } from '@sa/utils';
 import { useAppStore } from '@/store/modules/app';
 import { $t } from '@/locales';
+import { getTableSetting, setTableSetting } from '@/utils/table-settings';
 
 export type UseNaiveTableOptions<ResponseData, ApiData, Pagination extends boolean> = Omit<
   UseTableOptions<ResponseData, ApiData, NaiveUI.TableColumn<ApiData>, Pagination>,
@@ -22,11 +23,56 @@ export type UseNaiveTableOptions<ResponseData, ApiData, Pagination extends boole
    * @returns true if the column is visible, false otherwise
    */
   getColumnVisible?: (column: NaiveUI.TableColumn<ApiData>) => boolean;
+  /**
+   * unique table key used to persist table settings (column checks & sort) in the localStorage
+   *
+   * - if not provided, the settings are not persisted
+   */
+  tableKey?: string;
 };
 
 const SELECTION_KEY = '__selection__';
 
 const EXPAND_KEY = '__expand__';
+
+/**
+ * Restore and persist the column checks of a table
+ *
+ * The stored check state (`checked` / `fixed` / order) is merged onto the current default checks,
+ * so newly added or removed columns still work.
+ */
+function bindColumnChecksStorage(columnChecks: Ref<TableColumnCheck[]>, tableKey?: string) {
+  if (!tableKey) return;
+
+  const stored = getTableSetting(tableKey)?.columns;
+
+  if (stored?.length) {
+    const current = columnChecks.value;
+    const currentMap = new Map(current.map(check => [check.key, check]));
+
+    const ordered = stored
+      .map(item => {
+        const check = currentMap.get(item.key);
+
+        return check ? { ...check, checked: item.checked, fixed: item.fixed } : null;
+      })
+      .filter((check): check is TableColumnCheck => check !== null);
+
+    const rest = current.filter(check => !stored.some(item => item.key === check.key));
+
+    columnChecks.value = [...ordered, ...rest];
+  }
+
+  watch(
+    columnChecks,
+    checks => {
+      setTableSetting(tableKey, {
+        columns: checks.map(check => ({ key: check.key, checked: check.checked, fixed: check.fixed }))
+      });
+    },
+    { deep: true }
+  );
+}
 
 export function useNaiveTable<ResponseData, ApiData>(options: UseNaiveTableOptions<ResponseData, ApiData, false>) {
   const scope = effectScope();
@@ -47,6 +93,8 @@ export function useNaiveTable<ResponseData, ApiData>(options: UseNaiveTableOptio
   });
 
   scope.run(() => {
+    bindColumnChecksStorage(result.columnChecks, options.tableKey);
+
     watch(
       () => appStore.locale,
       () => {
@@ -150,6 +198,8 @@ export function useNaivePaginatedTable<ResponseData, ApiData>(
   }
 
   scope.run(() => {
+    bindColumnChecksStorage(result.columnChecks, options.tableKey);
+
     watch(
       () => appStore.locale,
       () => {

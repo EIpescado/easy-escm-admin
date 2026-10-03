@@ -69,6 +69,7 @@ function refresh() {
         </template>
         {{ $t('common.refresh') }}
       </NButton>
+      <slot name="export"></slot>
       <TableColumnSetting v-model:columns="columns" />
       <slot name="suffix"></slot>
     </NSpace>

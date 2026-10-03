@@ -217,8 +217,10 @@ function handleSearch() {
             </template>
             {{ collapsed ? $t('queryFilter.showMore') : $t('queryFilter.showLess') }}
           </NButton>
-          <NButton size="small" type="primary" @click="handleSearch">{{ $t('common.search') }}</NButton>
-          <NButton size="small" @click="emit('reset')">{{ $t('common.reset') }}</NButton>
+          <NButton size="small" type="primary" class="w-1/4" @click="handleSearch">
+            {{ $t('common.search') }}
+          </NButton>
+          <NButton size="small" class="w-1/4" @click="emit('reset')">{{ $t('common.reset') }}</NButton>
         </div>
       </NGi>
     </NGrid>
