@@ -41,7 +41,10 @@ function refresh() {
 <template>
   <div class="flex items-center justify-between gap-8px">
     <NSpace :align="itemAlign" wrap>
-      <slot name="default">
+      <template v-if="$slots.default">
+        <slot name="default"></slot>
+      </template>
+      <template v-else>
         <NButton size="small" ghost type="primary" @click="add">
           <template #icon>
             <icon-ic-round-plus class="text-icon" />
@@ -59,9 +62,9 @@ function refresh() {
           </template>
           {{ $t('common.confirmDelete') }}
         </NPopconfirm>
-      </slot>
+      </template>
     </NSpace>
-    <NSpace :align="itemAlign" wrap justify="end">
+    <NSpace :align="itemAlign" wrap justify="end" class="ml-auto">
       <slot name="prefix"></slot>
       <NButton size="small" @click="refresh">
         <template #icon>

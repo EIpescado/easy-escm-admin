@@ -332,6 +332,8 @@ declare namespace App {
         columnSetting: string;
         config: string;
         confirm: string;
+        confirmEnable: string;
+        confirmDisable: string;
         delete: string;
         deleteSuccess: string;
         confirmDelete: string;
@@ -363,6 +365,19 @@ declare namespace App {
           yes: string;
           no: string;
         };
+      };
+      button: {
+        add: string;
+        search: string;
+        update: string;
+        resetPassword: string;
+        enable: string;
+        disable: string;
+        detail: string;
+        orgList: string;
+        bindMenu: string;
+        menuIds: string;
+        roleSelect: string;
       };
       request: {
         logout: string;
@@ -536,6 +551,8 @@ declare namespace App {
             registerTime: string;
             resetPassword: string;
             resetPasswordConfirm: string;
+            enableConfirm: string;
+            disableConfirm: string;
             state: {
               normal: string;
               forbidden: string;
@@ -549,6 +566,8 @@ declare namespace App {
             stateLabel: string;
             menuAuth: string;
             menuAuthSuccess: string;
+            enableConfirm: string;
+            disableConfirm: string;
             state: {
               on: string;
               off: string;

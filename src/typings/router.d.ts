@@ -69,6 +69,12 @@ declare module 'vue-router' {
     /** if set query parameters, it will be automatically carried when entering the route */
     query?: { key: string; value: string }[] | null;
     /**
+     * Buttons of the route, provided by the backend menu tree, grouped by `system_button.position`
+     *
+     * It is only populated in dynamic route mode.
+     */
+    buttons?: Record<string, Api.SystemManage.ButtonNode[]>;
+    /**
      * Whether the route is only available in the development environment
      *
      * When set to true, the route will only be loaded if `import.meta.env.DEV` is true, even if the route mode is

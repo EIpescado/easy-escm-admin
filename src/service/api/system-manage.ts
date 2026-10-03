@@ -92,6 +92,15 @@ export function fetchBindRoleMenu(data: Api.SystemManage.RoleBindMenuForm) {
   return request<string>({ url: '/system/role/bindMenu', method: 'post', data });
 }
 
+/** enable/disable role */
+export function fetchToggleRoleState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/role/enable' : '/system/role/disable',
+    method: 'post',
+    data: { id }
+  });
+}
+
 /** get menu tree */
 export function fetchGetMenuTree() {
   return request<Api.SystemManage.MenuNode[]>({ url: '/system/menu/tree' });

@@ -3,7 +3,8 @@ import { computed, h, reactive, ref, watch } from 'vue';
 import { NButton, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
-import { fetchRoleExport, fetchRoleList } from '@/service/api';
+import { getButtonLabel, usePageButtons } from '@/hooks/business/page-buttons';
+import { fetchRoleExport, fetchRoleList, fetchToggleRoleState } from '@/service/api';
 import { roleStateOptions, roleStateRecord } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
 import { getExportItems, getTableOperateColumnWidth } from '@/utils/table';
@@ -76,16 +77,19 @@ const params = reactive<Api.SystemManage.PageQo>({
   orders: toOrderItems(searchSort.value)
 });
 
+/** Buttons of the current route, provided by the backend menu tree */
+const { toolbarButtons, rowButtons } = usePageButtons();
+
+/** Row action buttons (position `row`), e.g. edit / menu auth */
 function getOperateOptions(_row: Api.SystemManage.Role) {
-  return [
-    { key: 'edit', label: $t('common.edit') },
-    { key: 'menuAuth', label: $t('page.manage.role.menuAuth') }
-  ];
+  return rowButtons.value.map(button => ({
+    key: button.click ?? button.name,
+    label: getButtonLabel(button),
+    icon: button.icon || undefined
+  }));
 }
 
-const operateColumnWidth = computed(() =>
-  getTableOperateColumnWidth([$t('common.edit'), $t('page.manage.role.menuAuth')])
-);
+const operateColumnWidth = computed(() => getTableOperateColumnWidth(rowButtons.value.map(button => button.name)));
 
 const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
   tableKey: TABLE_KEY,
@@ -101,40 +105,66 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
 
     return { data: [], pageNum: 1, pageSize: 10, total: 0 };
   },
-  columns: () => [
-    {
-      key: 'operate',
-      title: $t('common.operate'),
-      align: 'center',
-      width: operateColumnWidth.value,
-      render: (row: Api.SystemManage.Role) =>
-        h(TableRowOperation, {
-          options: getOperateOptions(row),
-          onSelect: (key: string) => handleRowAction(row, key)
-        })
-    },
-    { type: 'selection', align: 'center', width: 48 },
-    { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
-    { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
-    {
-      key: 'state',
-      title: $t('page.manage.role.stateLabel'),
-      align: 'center',
-      width: 100,
-      render: row =>
-        h(
-          NTag,
-          { type: row.stateEnum === 'ON' ? 'success' : 'error', size: 'small', bordered: false },
-          { default: () => $t(roleStateRecord[row.stateEnum]) }
-        )
-    },
-    { key: 'remark', title: $t('page.manage.role.remark'), align: 'center', minWidth: 160 }
-  ],
+  columns: () => {
+    const tableColumns: NaiveUI.TableColumn<Api.SystemManage.Role>[] = [];
+
+    // hide the operate column when the route has no row buttons
+    if (rowButtons.value.length) {
+      tableColumns.push({
+        key: 'operate',
+        title: $t('common.operate'),
+        align: 'center',
+        width: operateColumnWidth.value,
+        render: (row: Api.SystemManage.Role) =>
+          h(TableRowOperation, {
+            options: getOperateOptions(row),
+            onSelect: (key: string) => handleRowAction(row, key)
+          })
+      });
+    }
+
+    tableColumns.push(
+      { type: 'selection', align: 'center', width: 48 },
+      { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
+      { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
+      {
+        key: 'state',
+        title: $t('page.manage.role.stateLabel'),
+        align: 'center',
+        width: 100,
+        render: row =>
+          h(
+            NTag,
+            { type: row.stateEnum === 'ON' ? 'success' : 'error', size: 'small', bordered: false },
+            { default: () => $t(roleStateRecord[row.stateEnum]) }
+          )
+      },
+      { key: 'remark', title: $t('page.manage.role.remark'), align: 'center', minWidth: 160 }
+    );
+
+    return tableColumns;
+  },
   onPaginationParamsChange: paginationParams => {
     params.page = paginationParams.page ?? 1;
     params.size = paginationParams.pageSize ?? 10;
   }
 });
+
+// the operate column is driven by the backend row buttons; keep it visible and leftmost
+watch(
+  rowButtons,
+  () => {
+    const index = columnChecks.value.findIndex(check => check.key === 'operate');
+
+    if (index < 0) return;
+
+    const [operateCheck] = columnChecks.value.splice(index, 1);
+
+    operateCheck.checked = rowButtons.value.length > 0;
+    columnChecks.value.unshift(operateCheck);
+  },
+  { immediate: true }
+);
 
 /** Pagination with the sort button rendered on its right (via the pagination `suffix`) */
 const tablePagination = computed(() => ({
@@ -179,11 +209,51 @@ function handleAuth(id: string) {
   openAuth();
 }
 
+function handleSetState(row: Api.SystemManage.Role, enable: boolean) {
+  window.$dialog?.warning({
+    title: $t('common.tip'),
+    content: $t(enable ? 'page.manage.role.enableConfirm' : 'page.manage.role.disableConfirm', { name: row.roleName }),
+    positiveText: $t(enable ? 'common.confirmEnable' : 'common.confirmDisable'),
+    negativeText: $t('common.cancel'),
+    onPositiveClick: async () => {
+      const { error } = await fetchToggleRoleState(row.id, enable);
+
+      if (!error) {
+        window.$message?.success($t('common.updateSuccess'));
+        await getData();
+      }
+    }
+  });
+}
+
+/** Row action handlers, dispatched by the backend button `click` */
+const rowActionHandlers: Record<string, (row: Api.SystemManage.Role) => void> = {
+  update: row => handleEdit(row.id),
+  bindMenu: row => handleAuth(row.id),
+  enable: row => handleSetState(row, true),
+  disable: row => handleSetState(row, false)
+};
+
 function handleRowAction(row: Api.SystemManage.Role, key: string) {
-  if (key === 'edit') {
-    handleEdit(row.id);
-  } else if (key === 'menuAuth') {
-    handleAuth(row.id);
+  const handler = rowActionHandlers[key];
+
+  if (handler) {
+    handler(row);
+  } else {
+    window.$message?.info($t('common.lookForward'));
+  }
+}
+
+/** Toolbar buttons (position `top`), text comes from the backend button `name` */
+function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
+  const handlers: Record<string, () => void> = { add: handleAdd, search: handleSearch };
+
+  const handler = handlers[button.click ?? ''];
+
+  if (handler) {
+    handler();
+  } else {
+    window.$message?.info($t('common.lookForward'));
   }
 }
 
@@ -195,12 +265,10 @@ function handleSearch() {
   getDataByPage(1);
 }
 
-/** Reset only restores the query params to default, without sending a request */
+/** Reset only restores the query conditions to default, keeping the custom sort, without sending a request */
 function handleReset() {
   params.items = [];
-  params.orders = [];
   params.page = 1;
-  searchSort.value = [];
 }
 
 async function handleSubmitted() {
@@ -226,11 +294,18 @@ async function handleAuthSubmitted() {
       <template #header>
         <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData">
           <template #default>
-            <NButton size="small" ghost type="primary" @click="handleAdd">
-              <template #icon>
-                <icon-ic-round-plus class="text-icon" />
+            <NButton
+              v-for="button in toolbarButtons"
+              :key="button.id"
+              size="small"
+              ghost
+              type="primary"
+              @click="handleToolbarAction(button)"
+            >
+              <template v-if="button.icon" #icon>
+                <SvgIcon :icon="button.icon" />
               </template>
-              {{ $t('common.add') }}
+              {{ getButtonLabel(button) }}
             </NButton>
           </template>
           <template #export>

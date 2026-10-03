@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { NButton, NDropdown } from 'naive-ui';
 import { $t } from '@/locales';
+import { useSvgIcon } from '@/hooks/common/icon';
 
 defineOptions({
   name: 'TableRowOperation'
@@ -12,6 +13,8 @@ interface Operation {
   label: string;
   danger?: boolean;
   disabled?: boolean;
+  /** Iconify icon name */
+  icon?: string;
 }
 
 interface Props {
@@ -31,10 +34,17 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
+const { SvgIconVNode } = useSvgIcon();
+
 const isDropdown = computed(() => props.options.length > props.max);
 
 const dropdownOptions = computed(() =>
-  props.options.map(item => ({ key: item.key, label: item.label, disabled: item.disabled }))
+  props.options.map(item => ({
+    key: item.key,
+    label: item.label,
+    disabled: item.disabled,
+    icon: SvgIconVNode({ icon: item.icon, fontSize: 16 })
+  }))
 );
 
 function handleSelect(key: string) {
@@ -43,7 +53,7 @@ function handleSelect(key: string) {
 </script>
 
 <template>
-  <div class="inline-flex flex-wrap items-center gap-4px">
+  <div class="inline-flex flex-nowrap items-center gap-4px">
     <template v-if="!isDropdown">
       <NButton
         v-for="item in options"
@@ -54,6 +64,9 @@ function handleSelect(key: string) {
         :disabled="item.disabled"
         @click="handleSelect(item.key)"
       >
+        <template v-if="item.icon" #icon>
+          <SvgIcon :icon="item.icon" />
+        </template>
         {{ item.label }}
       </NButton>
     </template>

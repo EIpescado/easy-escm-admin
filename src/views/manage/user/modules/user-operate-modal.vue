@@ -51,11 +51,13 @@ const rules: FormRules = {
   }
 };
 
-watch(visible, async val => {
+watch([visible, () => props.row], async ([val]) => {
   if (!val) return;
 
   const { data: roles } = await fetchRoleSelect();
-  roleOptions.value = roles || [];
+
+  // normalize option values to string, the backend serializes Long ids as string
+  roleOptions.value = (roles || []).map(role => ({ ...role, value: String(role.value) }));
 
   restoreValidation();
 
@@ -65,7 +67,7 @@ watch(visible, async val => {
     nickname: props.row?.nickname ?? '',
     phone: props.row?.phone ?? '',
     mail: props.row?.mail ?? '',
-    roleIds: props.row?.roleIds ? [...props.row.roleIds] : []
+    roleIds: props.row?.roleIds ? props.row.roleIds.map(String) : []
   });
 });
 

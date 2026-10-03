@@ -121,6 +121,26 @@ declare namespace Api {
       buttonIds?: string[];
     }
 
+    /** menu button node, aligned with backend SystemButton / ButtonNode */
+    interface ButtonNode {
+      /** button id (backend Long is serialized as string) */
+      id: string;
+      /** button label */
+      name: string;
+      /** sort number */
+      sn?: number;
+      /** iconify icon name */
+      icon?: string;
+      /** click handler name, the front-end dispatches actions by it */
+      click?: string;
+      /** parent menu id (backend Long is serialized as string) */
+      pid?: string;
+      /** button position, e.g. `top`(toolbar) / `row`(row action) */
+      position?: string;
+      /** whether enabled */
+      enabled?: boolean;
+    }
+
     /** menu tree node */
     interface MenuMeta {
       title?: string;
@@ -138,7 +158,8 @@ declare namespace Api {
       multiTab?: boolean;
       fixedIndexInTab?: number;
       query?: { key: string; value: string }[];
-      buttons?: Record<string, unknown>;
+      /** buttons of the menu, grouped by `system_button.position` */
+      buttons?: Record<string, ButtonNode[]>;
     }
 
     interface MenuNode {

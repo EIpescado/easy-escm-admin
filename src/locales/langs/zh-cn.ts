@@ -20,6 +20,8 @@ const local: App.I18n.Schema = {
     columnSetting: '列设置',
     config: '配置',
     confirm: '确认',
+    confirmEnable: '确认启用',
+    confirmDisable: '确认禁用',
     delete: '删除',
     deleteSuccess: '删除成功',
     confirmDelete: '确认删除吗？',
@@ -51,6 +53,19 @@ const local: App.I18n.Schema = {
       yes: '是',
       no: '否'
     }
+  },
+  button: {
+    add: '新增',
+    search: '查询',
+    update: '修改',
+    resetPassword: '重置密码',
+    enable: '启用',
+    disable: '禁用',
+    detail: '详情',
+    orgList: '查看组织',
+    bindMenu: '分配权限',
+    menuIds: '已绑菜单',
+    roleSelect: '角色下拉'
   },
   request: {
     logout: '请求失败后登出用户',
@@ -287,6 +302,8 @@ const local: App.I18n.Schema = {
         registerTime: '注册时间',
         resetPassword: '重置密码',
         resetPasswordConfirm: '确认将该用户密码重置为默认密码？',
+        enableConfirm: '确认启用用户「{name}」？',
+        disableConfirm: '确认禁用用户「{name}」？',
         state: {
           normal: '正常',
           forbidden: '禁用',
@@ -300,6 +317,8 @@ const local: App.I18n.Schema = {
         stateLabel: '状态',
         menuAuth: '菜单授权',
         menuAuthSuccess: '授权成功',
+        enableConfirm: '确认启用角色「{name}」？',
+        disableConfirm: '确认禁用角色「{name}」？',
         state: {
           on: '启用',
           off: '禁用'

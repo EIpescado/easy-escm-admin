@@ -2,6 +2,7 @@
 import { computed, h, reactive, ref, watch } from 'vue';
 import { NButton, NTag } from 'naive-ui';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
+import { getButtonLabel, usePageButtons } from '@/hooks/business/page-buttons';
 import {
   fetchResetUserPassword,
   fetchToggleUserState,
@@ -77,24 +78,34 @@ const params = reactive<Api.SystemManage.PageQo>({
   orders: toOrderItems(searchSort.value)
 });
 
-function getOperateOptions(row: Api.SystemManage.User) {
-  return [
-    { key: 'edit', label: $t('common.edit') },
-    { key: 'resetPassword', label: $t('page.manage.user.resetPassword') },
-    {
-      key: 'toggleState',
-      label: row.stateEnum === 'NORMAL' ? $t('page.manage.user.state.forbidden') : $t('page.manage.user.state.normal'),
-      danger: row.stateEnum === 'NORMAL'
-    }
-  ];
+/** Buttons of the current route, provided by the backend menu tree */
+const { toolbarButtons, rowButtons } = usePageButtons();
+
+/** Toolbar buttons (position `top`), text comes from the backend button `name` */
+function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
+  const handlers: Record<string, () => void> = { add: handleAdd, search: handleSearch };
+
+  const handler = handlers[button.click ?? ''];
+
+  if (handler) {
+    handler();
+  } else {
+    window.$message?.info($t('common.lookForward'));
+  }
+}
+
+/** Row action buttons (position `row`), text comes from the backend button `name` */
+function getOperateOptions(_row: Api.SystemManage.User) {
+  return rowButtons.value.map(button => ({
+    key: button.click ?? button.name,
+    label: getButtonLabel(button),
+    danger: button.click === 'disable',
+    icon: button.icon || undefined
+  }));
 }
 
 const operateColumnWidth = computed(() =>
-  getTableOperateColumnWidth([
-    $t('common.edit'),
-    $t('page.manage.user.resetPassword'),
-    $t('page.manage.user.state.forbidden')
-  ])
+  getTableOperateColumnWidth(rowButtons.value.map(button => getButtonLabel(button)))
 );
 
 const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
@@ -111,42 +122,72 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
 
     return { data: [], pageNum: 1, pageSize: 10, total: 0 };
   },
-  columns: () => [
-    {
-      key: 'operate',
-      title: $t('common.operate'),
-      align: 'center',
-      width: operateColumnWidth.value,
-      render: (row: Api.SystemManage.User) =>
-        h(TableRowOperation, {
-          options: getOperateOptions(row),
-          onSelect: (key: string) => handleRowAction(row, key)
-        })
-    },
-    { type: 'selection', align: 'center', width: 48 },
-    { key: 'username', title: $t('page.manage.user.username'), align: 'center', minWidth: 100 },
-    { key: 'nickname', title: $t('page.manage.user.nickname'), align: 'center', minWidth: 100 },
-    { key: 'phone', title: $t('page.manage.user.phone'), align: 'center', minWidth: 120 },
-    { key: 'mail', title: $t('page.manage.user.mail'), align: 'center', minWidth: 160 },
-    {
-      key: 'state',
-      title: $t('page.manage.user.stateLabel'),
-      align: 'center',
-      width: 100,
-      render: row => {
-        const type = row.stateEnum === 'NORMAL' ? 'success' : row.stateEnum === 'FORBIDDEN' ? 'error' : 'warning';
+  columns: () => {
+    const tableColumns: NaiveUI.TableColumn<Api.SystemManage.User>[] = [];
 
-        return h(NTag, { type, size: 'small', bordered: false }, { default: () => $t(userStateRecord[row.stateEnum]) });
-      }
-    },
-    { key: 'registerTime', title: $t('page.manage.user.registerTime'), align: 'center', minWidth: 170 },
-    { key: 'lastLoginTime', title: $t('page.manage.user.lastLoginTime'), align: 'center', minWidth: 170 }
-  ],
+    // hide the operate column when the route has no row buttons
+    if (rowButtons.value.length) {
+      tableColumns.push({
+        key: 'operate',
+        title: $t('common.operate'),
+        align: 'center',
+        width: operateColumnWidth.value,
+        render: (row: Api.SystemManage.User) =>
+          h(TableRowOperation, {
+            options: getOperateOptions(row),
+            onSelect: (key: string) => handleRowAction(row, key)
+          })
+      });
+    }
+
+    tableColumns.push(
+      { type: 'selection', align: 'center', width: 48 },
+      { key: 'username', title: $t('page.manage.user.username'), align: 'center', minWidth: 100 },
+      { key: 'nickname', title: $t('page.manage.user.nickname'), align: 'center', minWidth: 100 },
+      { key: 'phone', title: $t('page.manage.user.phone'), align: 'center', minWidth: 120 },
+      { key: 'mail', title: $t('page.manage.user.mail'), align: 'center', minWidth: 160 },
+      {
+        key: 'state',
+        title: $t('page.manage.user.stateLabel'),
+        align: 'center',
+        width: 100,
+        render: row => {
+          const type = row.stateEnum === 'NORMAL' ? 'success' : row.stateEnum === 'FORBIDDEN' ? 'error' : 'warning';
+
+          return h(
+            NTag,
+            { type, size: 'small', bordered: false },
+            { default: () => $t(userStateRecord[row.stateEnum]) }
+          );
+        }
+      },
+      { key: 'registerTime', title: $t('page.manage.user.registerTime'), align: 'center', minWidth: 170 },
+      { key: 'lastLoginTime', title: $t('page.manage.user.lastLoginTime'), align: 'center', minWidth: 170 }
+    );
+
+    return tableColumns;
+  },
   onPaginationParamsChange: paginationParams => {
     params.page = paginationParams.page ?? 1;
     params.size = paginationParams.pageSize ?? 10;
   }
 });
+
+// the operate column is driven by the backend row buttons; keep it visible and leftmost
+watch(
+  rowButtons,
+  () => {
+    const index = columnChecks.value.findIndex(check => check.key === 'operate');
+
+    if (index < 0) return;
+
+    const [operateCheck] = columnChecks.value.splice(index, 1);
+
+    operateCheck.checked = rowButtons.value.length > 0;
+    columnChecks.value.unshift(operateCheck);
+  },
+  { immediate: true }
+);
 
 /** Pagination with the sort button rendered on its right (via the pagination `suffix`) */
 const tablePagination = computed(() => ({
@@ -205,12 +246,10 @@ function handleSearch() {
   getDataByPage(1);
 }
 
-/** Reset only restores the query params to default, without sending a request */
+/** Reset only restores the query conditions to default, keeping the custom sort, without sending a request */
 function handleReset() {
   params.items = [];
-  params.orders = [];
   params.page = 1;
-  searchSort.value = [];
 }
 
 async function handleResetPassword(id: string) {
@@ -229,13 +268,11 @@ async function handleResetPassword(id: string) {
   });
 }
 
-function handleToggleState(row: Api.SystemManage.User) {
-  const enable = row.stateEnum !== 'NORMAL';
-
+function handleSetState(row: Api.SystemManage.User, enable: boolean) {
   window.$dialog?.warning({
     title: $t('common.tip'),
-    content: $t('common.confirm'),
-    positiveText: $t('common.confirm'),
+    content: $t(enable ? 'page.manage.user.enableConfirm' : 'page.manage.user.disableConfirm', { name: row.username }),
+    positiveText: $t(enable ? 'common.confirmEnable' : 'common.confirmDisable'),
     negativeText: $t('common.cancel'),
     onPositiveClick: async () => {
       const { error } = await fetchToggleUserState(row.id, enable);
@@ -248,13 +285,21 @@ function handleToggleState(row: Api.SystemManage.User) {
   });
 }
 
+/** Row action handlers, dispatched by the backend button `click` */
+const rowActionHandlers: Record<string, (row: Api.SystemManage.User) => void> = {
+  update: row => handleEditUser(row.id),
+  resetPassword: row => handleResetPassword(row.id),
+  enable: row => handleSetState(row, true),
+  disable: row => handleSetState(row, false)
+};
+
 function handleRowAction(row: Api.SystemManage.User, key: string) {
-  if (key === 'edit') {
-    handleEditUser(row.id);
-  } else if (key === 'resetPassword') {
-    handleResetPassword(row.id);
-  } else if (key === 'toggleState') {
-    handleToggleState(row);
+  const handler = rowActionHandlers[key];
+
+  if (handler) {
+    handler(row);
+  } else {
+    window.$message?.info($t('common.lookForward'));
   }
 }
 
@@ -277,11 +322,18 @@ async function handleSubmitted() {
       <template #header>
         <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData">
           <template #default>
-            <NButton size="small" ghost type="primary" @click="handleAdd">
-              <template #icon>
-                <icon-ic-round-plus class="text-icon" />
+            <NButton
+              v-for="button in toolbarButtons"
+              :key="button.id"
+              size="small"
+              ghost
+              type="primary"
+              @click="handleToolbarAction(button)"
+            >
+              <template v-if="button.icon" #icon>
+                <SvgIcon :icon="button.icon" />
               </template>
-              {{ $t('common.add') }}
+              {{ getButtonLabel(button) }}
             </NButton>
           </template>
           <template #export>

@@ -20,6 +20,8 @@ const local: App.I18n.Schema = {
     columnSetting: 'Column Setting',
     config: 'Config',
     confirm: 'Confirm',
+    confirmEnable: 'Confirm Enable',
+    confirmDisable: 'Confirm Disable',
     delete: 'Delete',
     deleteSuccess: 'Delete Success',
     confirmDelete: 'Are you sure you want to delete?',
@@ -51,6 +53,19 @@ const local: App.I18n.Schema = {
       yes: 'Yes',
       no: 'No'
     }
+  },
+  button: {
+    add: 'Add',
+    search: 'Search',
+    update: 'Edit',
+    resetPassword: 'Reset Password',
+    enable: 'Enable',
+    disable: 'Disable',
+    detail: 'Detail',
+    orgList: 'View Orgs',
+    bindMenu: 'Assign Permissions',
+    menuIds: 'Bound Menus',
+    roleSelect: 'Role Select'
   },
   request: {
     logout: 'Logout user after request failed',
@@ -291,6 +306,8 @@ const local: App.I18n.Schema = {
         registerTime: 'Register Time',
         resetPassword: 'Reset Password',
         resetPasswordConfirm: 'Reset this user password to the default one?',
+        enableConfirm: 'Enable user "{name}"?',
+        disableConfirm: 'Disable user "{name}"?',
         state: {
           normal: 'Normal',
           forbidden: 'Disabled',
@@ -304,6 +321,8 @@ const local: App.I18n.Schema = {
         stateLabel: 'Status',
         menuAuth: 'Menu Auth',
         menuAuthSuccess: 'Authorized successfully',
+        enableConfirm: 'Enable role "{name}"?',
+        disableConfirm: 'Disable role "{name}"?',
         state: {
           on: 'Enabled',
           off: 'Disabled'
