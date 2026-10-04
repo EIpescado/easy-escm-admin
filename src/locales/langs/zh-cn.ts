@@ -4,12 +4,27 @@ const local: App.I18n.Schema = {
     updateTitle: '系统版本更新通知',
     updateContent: '检测到系统有新版本发布，是否立即刷新页面？',
     updateConfirm: '立即刷新',
-    updateCancel: '稍后再说'
+    updateCancel: '稍后再说',
+    user: {
+      resetPassword: '重置密码'
+    },
+    role: {
+      bindMenu: '分配权限'
+    },
+    menu: {
+      createSubMenu: '新增子菜单',
+      edit: '编辑菜单'
+    },
+    button: {
+      create: '新增按钮',
+      edit: '编辑按钮'
+    }
   },
   common: {
     action: '操作',
     add: '新增',
     addSuccess: '添加成功',
+    back: '返回',
     backToHome: '返回首页',
     batchDelete: '批量删除',
     cancel: '取消',
@@ -22,10 +37,13 @@ const local: App.I18n.Schema = {
     confirm: '确认',
     confirmEnable: '确认启用',
     confirmDisable: '确认禁用',
+    create: '新增',
     delete: '删除',
     deleteSuccess: '删除成功',
     confirmDelete: '确认删除吗？',
+    disable: '禁用',
     edit: '编辑',
+    enable: '启用',
     warning: '警告',
     error: '错误',
     export: '导出',
@@ -46,26 +64,13 @@ const local: App.I18n.Schema = {
     switch: '切换',
     tip: '提示',
     trigger: '触发',
-    update: '更新',
+    update: '编辑',
     updateSuccess: '更新成功',
     userCenter: '个人中心',
     yesOrNo: {
       yes: '是',
       no: '否'
     }
-  },
-  button: {
-    add: '新增',
-    search: '查询',
-    update: '修改',
-    resetPassword: '重置密码',
-    enable: '启用',
-    disable: '禁用',
-    detail: '详情',
-    orgList: '查看组织',
-    bindMenu: '分配权限',
-    menuIds: '已绑菜单',
-    roleSelect: '角色下拉'
   },
   request: {
     logout: '请求失败后登出用户',
@@ -245,7 +250,8 @@ const local: App.I18n.Schema = {
     manage: '系统管理',
     manage_user: '用户管理',
     manage_role: '角色管理',
-    manage_menu: '菜单管理'
+    manage_menu: '菜单管理',
+    'manage_user-detail': '用户详情'
   },
   page: {
     login: {
@@ -302,6 +308,11 @@ const local: App.I18n.Schema = {
         registerTime: '注册时间',
         resetPassword: '重置密码',
         resetPasswordConfirm: '确认将该用户密码重置为默认密码？',
+        resetPasswordTip: '6-18位字符，包含字母、数字、下划线',
+        newPassword: '新密码',
+        newPasswordPlaceholder: '请输入新密码',
+        confirmPassword: '确认密码',
+        confirmPasswordPlaceholder: '请再次输入新密码',
         enableConfirm: '确认启用用户「{name}」？',
         disableConfirm: '确认禁用用户「{name}」？',
         state: {
@@ -327,16 +338,72 @@ const local: App.I18n.Schema = {
       menu: {
         parent: '上级菜单',
         name: '路由名称',
+        buttonName: '按钮名称',
+        expandAll: '全部展开',
+        collapseAll: '全部折叠',
         title: '菜单标题',
+        menuName: '菜单名称',
+        i18nKey: '国际化键',
+        type: '类型',
+        directory: '目录',
+        menu: '菜单',
+        button: '按钮',
+        status: '菜单状态',
+        enabled: '启用',
+        disabled: '禁用',
+        enableConfirm: '确认启用「{name}」？',
+        disableConfirm: '确认禁用「{name}」？',
         path: '路由地址',
         component: '组件路径',
         icon: '图标',
+        localIcon: '本地图标',
+        iconFontSize: '图标大小',
+        roles: '路由角色',
         order: '排序',
+        sn: '排序号',
+        keepAlive: '页面缓存',
+        constant: '常显路由',
+        href: '外链地址',
+        activeMenu: '激活菜单',
+        multiTab: '多标签',
+        fixedIndexInTab: '固定标签序号',
+        query: '路由参数',
+        queryKey: '参数名',
+        queryValue: '参数值',
+        props: '路由 props',
         cached: '页面缓存',
         hidden: '隐藏菜单',
         root: '根目录',
         iconPlaceholder: '请输入 Iconify 图标名，如 mdi:home',
-        componentPlaceholder: '如 layout.base 或 view.manage_user'
+        componentPlaceholder: '如 layout.base 或 view.manage_user',
+        click: '触发动作',
+        buttonPosition: '按钮位置',
+        tips: {
+          parent: '上级节点；根节点为 -1',
+          name: '组件名称，必须唯一（后端 name）',
+          buttonName: '按钮显示名称',
+          title: '菜单标题，未配置国际化键时使用',
+          i18nKey: '国际化键，配置后优先用于多语言显示（此时 title 被忽略）',
+          icon: 'Iconify 图标名，如 mdi:home',
+          localIcon: '本地图标名（src/assets/svg-icon 下），设置后优先于 Iconify 图标',
+          iconFontSize: '图标字号，单位 px',
+          sn: '同级排序号，数值越小越靠前',
+          path: '路由地址，须以 / 开头',
+          component: '组件路径，如 layout.base 或 view.manage_user',
+          roles: '拥有任一角色的用户即可访问，留空表示无需权限',
+          href: '外链地址，设置后点击菜单会在新窗口打开',
+          activeMenu: '进入该路由时高亮显示的菜单 key',
+          order: '路由 meta 中的排序号',
+          keepAlive: '是否缓存该页面',
+          constant: '常显路由：无需登录且由前端定义',
+          hidden: '是否在侧边菜单中隐藏',
+          multiTab: '同一路由是否使用多个标签页',
+          fixedIndexInTab: '在标签页中固定显示的顺序',
+          query: '进入该路由时自动携带的 query 参数',
+          props: '传给路由组件的 props（JSON 对象）',
+          click: '点击按钮时前端分发的动作名，如 create / edit / delete',
+          position: '按钮位置：top=工具栏，row=行操作，也可自定义'
+        }
       }
     },
     home: {

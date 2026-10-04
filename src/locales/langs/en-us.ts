@@ -4,12 +4,27 @@ const local: App.I18n.Schema = {
     updateTitle: 'System Version Update Notification',
     updateContent: 'A new version of the system has been detected. Do you want to refresh the page immediately?',
     updateConfirm: 'Refresh immediately',
-    updateCancel: 'Later'
+    updateCancel: 'Later',
+    user: {
+      resetPassword: 'Reset Password'
+    },
+    role: {
+      bindMenu: 'Assign Permissions'
+    },
+    menu: {
+      createSubMenu: 'Create Submenu',
+      edit: 'Edit Menu'
+    },
+    button: {
+      create: 'Create Button',
+      edit: 'Edit Button'
+    }
   },
   common: {
     action: 'Action',
     add: 'Add',
     addSuccess: 'Add Success',
+    back: 'Back',
     backToHome: 'Back to home',
     batchDelete: 'Batch Delete',
     cancel: 'Cancel',
@@ -22,10 +37,13 @@ const local: App.I18n.Schema = {
     confirm: 'Confirm',
     confirmEnable: 'Confirm Enable',
     confirmDisable: 'Confirm Disable',
+    create: 'Create',
     delete: 'Delete',
     deleteSuccess: 'Delete Success',
     confirmDelete: 'Are you sure you want to delete?',
+    disable: 'Disable',
     edit: 'Edit',
+    enable: 'Enable',
     warning: 'Warning',
     error: 'Error',
     export: 'Export',
@@ -53,19 +71,6 @@ const local: App.I18n.Schema = {
       yes: 'Yes',
       no: 'No'
     }
-  },
-  button: {
-    add: 'Add',
-    search: 'Search',
-    update: 'Edit',
-    resetPassword: 'Reset Password',
-    enable: 'Enable',
-    disable: 'Disable',
-    detail: 'Detail',
-    orgList: 'View Orgs',
-    bindMenu: 'Assign Permissions',
-    menuIds: 'Bound Menus',
-    roleSelect: 'Role Select'
   },
   request: {
     logout: 'Logout user after request failed',
@@ -249,7 +254,8 @@ const local: App.I18n.Schema = {
     manage: 'System',
     manage_user: 'User',
     manage_role: 'Role',
-    manage_menu: 'Menu'
+    manage_menu: 'Menu',
+    'manage_user-detail': 'User Detail'
   },
   page: {
     login: {
@@ -306,6 +312,11 @@ const local: App.I18n.Schema = {
         registerTime: 'Register Time',
         resetPassword: 'Reset Password',
         resetPasswordConfirm: 'Reset this user password to the default one?',
+        resetPasswordTip: '6-18 characters, including letters, numbers and underscores',
+        newPassword: 'New Password',
+        newPasswordPlaceholder: 'Please enter the new password',
+        confirmPassword: 'Confirm Password',
+        confirmPasswordPlaceholder: 'Please enter the new password again',
         enableConfirm: 'Enable user "{name}"?',
         disableConfirm: 'Disable user "{name}"?',
         state: {
@@ -331,16 +342,72 @@ const local: App.I18n.Schema = {
       menu: {
         parent: 'Parent Menu',
         name: 'Route Name',
+        buttonName: 'Button Name',
+        expandAll: 'Expand All',
+        collapseAll: 'Collapse All',
         title: 'Menu Title',
+        menuName: 'Menu Name',
+        i18nKey: 'i18n Key',
+        type: 'Type',
+        directory: 'Directory',
+        menu: 'Menu',
+        button: 'Button',
+        status: 'Status',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        enableConfirm: 'Enable "{name}"?',
+        disableConfirm: 'Disable "{name}"?',
         path: 'Route Path',
         component: 'Component',
         icon: 'Icon',
+        localIcon: 'Local Icon',
+        iconFontSize: 'Icon Size',
+        roles: 'Route Roles',
         order: 'Order',
+        sn: 'Sort No',
+        keepAlive: 'Keep Alive',
+        constant: 'Constant Route',
+        href: 'Href',
+        activeMenu: 'Active Menu',
+        multiTab: 'Multi Tab',
+        fixedIndexInTab: 'Fixed Index In Tab',
+        query: 'Route Params',
+        queryKey: 'Key',
+        queryValue: 'Value',
+        props: 'Route Props',
         cached: 'Keep Alive',
         hidden: 'Hidden',
         root: 'Root',
         iconPlaceholder: 'Iconify icon name, e.g. mdi:home',
-        componentPlaceholder: 'e.g. layout.base or view.manage_user'
+        componentPlaceholder: 'e.g. layout.base or view.manage_user',
+        click: 'Click Action',
+        buttonPosition: 'Button Position',
+        tips: {
+          parent: 'Parent node; the root is -1',
+          name: 'Component name, must be unique (backend `name`)',
+          buttonName: 'Button display name',
+          title: 'Menu title, used when no i18n key is configured',
+          i18nKey: 'i18n key; when set it is used for multi-language (title is ignored)',
+          icon: 'Iconify icon name, e.g. mdi:home',
+          localIcon: 'Local icon name under src/assets/svg-icon; takes priority over the Iconify icon',
+          iconFontSize: 'Icon font size in px',
+          sn: 'Sort number among siblings; smaller comes first',
+          path: 'Route path, must start with /',
+          component: 'Component path, e.g. layout.base or view.manage_user',
+          roles: 'Users with any of these roles can access; empty means no restriction',
+          href: 'External link; opens in a new window when the menu is clicked',
+          activeMenu: 'Menu key to highlight when this route is active',
+          order: 'Order in the route meta',
+          keepAlive: 'Whether to cache the page',
+          constant: 'Constant route: no login required and defined in the front-end',
+          hidden: 'Whether to hide it from the sidebar menu',
+          multiTab: 'Whether the same route uses multiple tabs',
+          fixedIndexInTab: 'Order when pinned in tabs',
+          query: 'Query params automatically carried when entering this route',
+          props: 'Props passed to the route component (JSON object)',
+          click: 'Action name dispatched by the front-end on click, e.g. create / edit / delete',
+          position: 'Button position: top=toolbar, row=row action; custom values allowed'
+        }
       }
     },
     home: {

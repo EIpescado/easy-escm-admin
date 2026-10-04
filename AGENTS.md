@@ -2,6 +2,8 @@
 
 本项目是 [SoybeanAdmin](https://github.com/soybeanjs/soybean-admin) v2.2.0 的分支（上游包名仍为 `soybean-admin`），技术上基于 Vue 3 / Vite 8 / TypeScript / NaiveUI / UnoCSS，但已改造为 **easy-escm** 管理后台：接入真实认证、**后端动态菜单**与用户/角色/菜单管理页。改动集中在 `src/service/api/`、`src/store/modules/{auth,route}/`、`src/views/manage/`。不要按原版模板的默认行为假设。
 
+> ⚠️ `docs/v3.md` 是未来 **v3.0 全栈重构草案**（ubean / vite-plus / SoybeanUI / Drizzle），**不是当前代码架构**。当前仍是上述 v2 技术栈；不要照该文档改代码。
+
 ## 快速命令
 
 | 操作                | 命令                                                   |
@@ -35,6 +37,7 @@
 - 系统管理接口统一带 `/system/` 前缀：`/system/user/**`、`/system/role/**`、`/system/menu/**`（旧的无前缀 `/user`、`/role`、`/menu` 已废弃）。
 - 响应信封 `{ code, message, res }`：`code` 等于 `VITE_SERVICE_SUCCESS_CODE`（`0`）即成功，`request` 自动解包返回 `res`（`src/service/request/index.ts`）。
 - 认证头不是 `Authorization`，而是 `VITE_AUTH_HEADER_NAME=easy-auth`，值为 `Bearer <token>`。
+- 登录请求体在 `src/service/api/auth.ts` 中硬编码了 `clientId: 'escm-pc-api'`、`grantType: 'password'`、`orgCode: 'HFY'`；`fetchGetUserRoutes` 固定带 `rootId: 1`。切换后端 / 租户时先改这里。
 
 ## 动态路由 / 菜单（本分支核心）
 
@@ -43,6 +46,15 @@
 - 因此：新增/重命名 `src/views` 下的页面后，必须让路由重新生成（dev server 会自动生成，或手动 `pnpm gen-route`），否则动态菜单解析不到该组件。
 - 菜单 i18n key 约定为 `route.<routerName>`，`MenuNode.name` 即路由名；缺少对应 `route.*` 文案时菜单会直接显示原始 key。
 - 路由含 `meta.isDev` 时仅开发环境加载（`filterRoutesByDev`，见 `src/constants/env.ts` 的 `isDev`）。
+
+## 系统管理页（本分支新增）
+
+- 页面在 `src/views/manage/{user,role,menu}/`，路由名固定为 `manage_user` / `manage_role` / `manage_menu`（见 `src/router/elegant/imports.ts`）。
+- 用户详情是独立页面 `src/views/manage/user-detail/[id].vue`（路由 `manage_user-detail`，路径 `/manage/user-detail/:id`，参数经 `props.id` 注入），由用户列表的「详情」行按钮进入。dynamic 模式下需后端菜单提供对应节点（建议 `hideInMenu: true`）才会注册该路由。
+- 按钮权限由后端菜单 `meta.buttons` 下发，按 `position` 分 `top`（工具栏）/ `row`（行操作）；用 `usePageButtons()`（`src/hooks/business/page-buttons.ts`）读取，`click` 动作映射到 i18n，未知动作回退后端 `name`。
+- 按钮可用性可配置：页面用 `usePageButtonState<Row>(rules)`（同文件）声明规则，规则以 `click` 为 key、接收 `{ rows, position }` 并返回 `true` 表示禁用（top 的 `rows` 是勾选行，row 的 `rows` 是当前行）。行按钮经 `TableRowOperation` 的 `disabled`、工具栏按钮经 `TableToolbarButtons` 的 `:disabled` 生效。
+- 列表查询走后端动态查询模型：`PageQo` 的 `items`（条件）/ `orders`（排序）/ `exportItems`（导出列），与后端 `BaseQo` 对齐（`src/typings/api/system-manage.d.ts`），前端在 `src/components/advanced/query-filter/` 组装。
+- 导出复用同一 search 接口并带 `export: true`，后端返回 xlsx 流（`responseType: 'blob'`）。
 
 ## 项目结构
 
@@ -68,6 +80,7 @@
 - **类型检查用 `vue-tsc`，不是 `tsc`**。
 - **必须使用 pnpm**（monorepo；npm/yarn 无法运行；`pnpm-workspace.yaml` 设 `shamefullyHoist: true`）。Node >=20.19，pnpm >=10.5。
 - 组件自动导入：**不要手动 import 组件**。
+- CI（`.github/workflows/linter.yml`）仅在 PR 到 `main` 时跑 `super-linter`，**不跑 typecheck / build**；本地务必自行执行 `pnpm typecheck`。
 - 图标：`@iconify/vue` + `vite-plugin-svg-icons`；前缀 `icon-`，本地图标前缀 `icon-local-`。
 - npm 源：`.npmrc` 指向 `registry.npmmirror.com`。
 

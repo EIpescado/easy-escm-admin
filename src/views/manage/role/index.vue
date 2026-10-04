@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed, h, reactive, ref, watch } from 'vue';
-import { NButton, NTag } from 'naive-ui';
+import { NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
-import { getButtonLabel, usePageButtons } from '@/hooks/business/page-buttons';
+import {
+  getButtonLabel,
+  usePageButtonState,
+  usePageButtons,
+  type PageButtonStateRules
+} from '@/hooks/business/page-buttons';
 import { fetchRoleExport, fetchRoleList, fetchToggleRoleState } from '@/service/api';
 import { roleStateOptions, roleStateRecord } from '@/constants/business';
-import { translateOptions } from '@/utils/common';
+import { showConfirmDialog, translateOptions } from '@/utils/common';
 import { getExportItems, getTableOperateColumnWidth } from '@/utils/table';
 import { getTableSetting, setTableSetting } from '@/utils/table-settings';
 import { $t } from '@/locales';
@@ -80,11 +85,27 @@ const params = reactive<Api.SystemManage.PageQo>({
 /** Buttons of the current route, provided by the backend menu tree */
 const { toolbarButtons, rowButtons } = usePageButtons();
 
+/**
+ * Button state rules, keyed by the backend button `click` code.
+ *
+ * Return `true` to disable a button. `rows` is the checked rows for a toolbar button, or the row
+ * itself for a row button.
+ */
+const buttonStateRules: PageButtonStateRules<Api.SystemManage.Role> = {
+  enable: ({ rows }) => !rows.some(row => row.stateEnum !== 'ON'),
+  disable: ({ rows }) => !rows.some(row => row.stateEnum === 'ON'),
+  update: ({ rows }) => rows.length !== 1,
+  bindMenu: ({ rows }) => rows.length !== 1
+};
+
+const { isDisabled: isButtonDisabled } = usePageButtonState(buttonStateRules);
+
 /** Row action buttons (position `row`), e.g. edit / menu auth */
-function getOperateOptions(_row: Api.SystemManage.Role) {
+function getOperateOptions(row: Api.SystemManage.Role) {
   return rowButtons.value.map(button => ({
     key: button.click ?? button.name,
     label: getButtonLabel(button),
+    disabled: isButtonDisabled(button.click, [row], 'row'),
     icon: button.icon || undefined
   }));
 }
@@ -183,16 +204,31 @@ const tablePagination = computed(() => ({
 /** Export items follow the current column settings (checked columns, in table order) */
 const exportItems = computed(() => getExportItems(columnChecks.value));
 
-const { drawerVisible, openDrawer, closeDrawer, operateType, editingData, handleAdd } = useTableOperate(
+const { drawerVisible, openDrawer, closeDrawer, operateType, editingData, checkedRowKeys } = useTableOperate(
   data,
   'id',
   getData
 );
 
+/** rows currently checked in the table, used by the toolbar button state rules */
+const selectedRows = computed(() => data.value.filter(row => checkedRowKeys.value.includes(row.id)));
+
+/** whether a toolbar button is disabled by its rules and the current selection */
+function isToolbarButtonDisabled(button: Api.SystemManage.ButtonNode) {
+  return isButtonDisabled(button.click, selectedRows.value, 'top');
+}
+
 const editRow = computed(() => editingData.value as unknown as Api.SystemManage.RoleForm | null);
 
 const { bool: authVisible, setTrue: openAuth } = useBoolean();
 const authRoleId = ref('');
+
+/** Open the add form with a clean model (clear the previously edited row) */
+function handleAdd() {
+  operateType.value = 'add';
+  editingData.value = null;
+  openDrawer();
+}
 
 function handleEdit(id: string) {
   const row = data.value.find(item => item.id === id);
@@ -210,12 +246,10 @@ function handleAuth(id: string) {
 }
 
 function handleSetState(row: Api.SystemManage.Role, enable: boolean) {
-  window.$dialog?.warning({
-    title: $t('common.tip'),
+  showConfirmDialog({
     content: $t(enable ? 'page.manage.role.enableConfirm' : 'page.manage.role.disableConfirm', { name: row.roleName }),
     positiveText: $t(enable ? 'common.confirmEnable' : 'common.confirmDisable'),
-    negativeText: $t('common.cancel'),
-    onPositiveClick: async () => {
+    onConfirm: async () => {
       const { error } = await fetchToggleRoleState(row.id, enable);
 
       if (!error) {
@@ -246,7 +280,7 @@ function handleRowAction(row: Api.SystemManage.Role, key: string) {
 
 /** Toolbar buttons (position `top`), text comes from the backend button `name` */
 function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
-  const handlers: Record<string, () => void> = { add: handleAdd, search: handleSearch };
+  const handlers: Record<string, () => void> = { create: handleAdd, search: handleSearch };
 
   const handler = handlers[button.click ?? ''];
 
@@ -294,19 +328,11 @@ async function handleAuthSubmitted() {
       <template #header>
         <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData">
           <template #default>
-            <NButton
-              v-for="button in toolbarButtons"
-              :key="button.id"
-              size="small"
-              ghost
-              type="primary"
-              @click="handleToolbarAction(button)"
-            >
-              <template v-if="button.icon" #icon>
-                <SvgIcon :icon="button.icon" />
-              </template>
-              {{ getButtonLabel(button) }}
-            </NButton>
+            <TableToolbarButtons
+              :buttons="toolbarButtons"
+              :disabled="isToolbarButtonDisabled"
+              @select="handleToolbarAction"
+            />
           </template>
           <template #export>
             <TableExportButton :api="() => fetchRoleExport({ ...params, exportItems })" />
@@ -314,6 +340,7 @@ async function handleAuthSubmitted() {
         </TableHeaderOperation>
       </template>
       <NDataTable
+        v-model:checked-row-keys="checkedRowKeys"
         :columns="columns"
         :data="data"
         :loading="loading"

@@ -37,6 +37,48 @@ export function translateOptions(options: CommonType.Option<string, App.I18n.I18
   }));
 }
 
+interface ConfirmDialogOptions {
+  content: string;
+  onConfirm: () => Promise<void> | void;
+  title?: string;
+  positiveText?: string;
+  negativeText?: string;
+  type?: 'info' | 'success' | 'warning' | 'error';
+}
+
+/**
+ * Show a confirm dialog and disable its positive button while `onConfirm` is running.
+ *
+ * This prevents duplicate submissions (e.g. repeated enable/disable requests), which naive-ui's
+ * discrete dialog API does not guard against by itself.
+ *
+ * @param options dialog options
+ */
+export function showConfirmDialog(options: ConfirmDialogOptions) {
+  const { title, content, positiveText, negativeText, type = 'warning', onConfirm } = options;
+
+  const dialog = window.$dialog?.[type]({
+    title: title ?? $t('common.tip'),
+    content,
+    positiveText: positiveText ?? $t('common.confirm'),
+    negativeText: negativeText ?? $t('common.cancel'),
+    onPositiveClick: async () => {
+      // a duplicate click while the action is in flight must neither run it again nor close the dialog
+      if (dialog?.loading) return false;
+
+      if (dialog) dialog.loading = true;
+
+      try {
+        await onConfirm();
+      } finally {
+        if (dialog) dialog.loading = false;
+      }
+    }
+  });
+
+  return dialog;
+}
+
 /**
  * Toggle html class
  *

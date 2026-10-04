@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { computed, h, reactive, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { NButton, NTag } from 'naive-ui';
+import { useBoolean } from '@sa/hooks';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
-import { getButtonLabel, usePageButtons } from '@/hooks/business/page-buttons';
 import {
-  fetchResetUserPassword,
-  fetchToggleUserState,
-  fetchUserDetail,
-  fetchUserExport,
-  fetchUserList
-} from '@/service/api';
+  getButtonLabel,
+  usePageButtonState,
+  usePageButtons,
+  type PageButtonStateRules
+} from '@/hooks/business/page-buttons';
+import { fetchToggleUserState, fetchUserDetail, fetchUserExport, fetchUserList } from '@/service/api';
 import { userStateOptions, userStateRecord } from '@/constants/business';
-import { translateOptions } from '@/utils/common';
+import { showConfirmDialog, translateOptions } from '@/utils/common';
 import { getExportItems, getTableOperateColumnWidth } from '@/utils/table';
 import { getTableSetting, setTableSetting } from '@/utils/table-settings';
 import { $t } from '@/locales';
@@ -28,10 +29,13 @@ import {
   type QuerySortItem
 } from '@/components/advanced/query-filter/types';
 import UserOperateModal from './modules/user-operate-modal.vue';
+import UserResetPasswordModal from './modules/user-reset-password-modal.vue';
 
 defineOptions({
   name: 'ManageUser'
 });
+
+const router = useRouter();
 
 const searchFields = computed<QueryField[]>(() => [
   { prop: 'username', label: $t('page.manage.user.username'), valueType: 'text', defaultType: 'like', types: ['like'] },
@@ -81,9 +85,24 @@ const params = reactive<Api.SystemManage.PageQo>({
 /** Buttons of the current route, provided by the backend menu tree */
 const { toolbarButtons, rowButtons } = usePageButtons();
 
+/**
+ * Button state rules, keyed by the backend button `click` code.
+ *
+ * Return `true` to disable a button. `rows` is the checked rows for a toolbar button, or the row
+ * itself for a row button.
+ */
+const buttonStateRules: PageButtonStateRules<Api.SystemManage.User> = {
+  enable: ({ rows }) => !rows.some(row => row.stateEnum !== 'NORMAL'),
+  disable: ({ rows }) => !rows.some(row => row.stateEnum === 'NORMAL'),
+  update: ({ rows }) => rows.length !== 1,
+  resetPassword: ({ rows }) => rows.length !== 1
+};
+
+const { isDisabled: isButtonDisabled } = usePageButtonState(buttonStateRules);
+
 /** Toolbar buttons (position `top`), text comes from the backend button `name` */
 function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
-  const handlers: Record<string, () => void> = { add: handleAdd, search: handleSearch };
+  const handlers: Record<string, () => void> = { create: handleAdd, search: handleSearch };
 
   const handler = handlers[button.click ?? ''];
 
@@ -95,11 +114,12 @@ function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
 }
 
 /** Row action buttons (position `row`), text comes from the backend button `name` */
-function getOperateOptions(_row: Api.SystemManage.User) {
+function getOperateOptions(row: Api.SystemManage.User) {
   return rowButtons.value.map(button => ({
     key: button.click ?? button.name,
     label: getButtonLabel(button),
     danger: button.click === 'disable',
+    disabled: isButtonDisabled(button.click, [row], 'row'),
     icon: button.icon || undefined
   }));
 }
@@ -142,7 +162,18 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
 
     tableColumns.push(
       { type: 'selection', align: 'center', width: 48 },
-      { key: 'username', title: $t('page.manage.user.username'), align: 'center', minWidth: 100 },
+      {
+        key: 'username',
+        title: $t('page.manage.user.username'),
+        align: 'center',
+        minWidth: 100,
+        render: row =>
+          h(
+            NButton,
+            { text: true, type: 'primary', onClick: () => handleUserDetail(row.id) },
+            { default: () => row.username }
+          )
+      },
       { key: 'nickname', title: $t('page.manage.user.nickname'), align: 'center', minWidth: 100 },
       { key: 'phone', title: $t('page.manage.user.phone'), align: 'center', minWidth: 120 },
       { key: 'mail', title: $t('page.manage.user.mail'), align: 'center', minWidth: 160 },
@@ -212,6 +243,14 @@ const { drawerVisible, openDrawer, closeDrawer, operateType, editingData, checke
   getData
 );
 
+/** rows currently checked in the table, used by the toolbar button state rules */
+const selectedRows = computed(() => data.value.filter(row => checkedRowKeys.value.includes(row.id)));
+
+/** whether a toolbar button is disabled by its rules and the current selection */
+function isToolbarButtonDisabled(button: Api.SystemManage.ButtonNode) {
+  return isButtonDisabled(button.click, selectedRows.value, 'top');
+}
+
 const editRow = computed(() => editingData.value as unknown as Api.SystemManage.UserForm | null);
 
 function handleAdd() {
@@ -238,6 +277,11 @@ async function handleEditUser(id: string) {
   }
 }
 
+/** navigate to the standalone user detail page */
+function handleUserDetail(id: string) {
+  router.push({ name: 'manage_user-detail', params: { id } });
+}
+
 function handleSearch() {
   params.items = toQueryItems(searchConditions.value);
   params.orders = toOrderItems(searchSort.value);
@@ -252,29 +296,21 @@ function handleReset() {
   params.page = 1;
 }
 
-async function handleResetPassword(id: string) {
-  window.$dialog?.warning({
-    title: $t('common.tip'),
-    content: $t('page.manage.user.resetPasswordConfirm'),
-    positiveText: $t('common.confirm'),
-    negativeText: $t('common.cancel'),
-    onPositiveClick: async () => {
-      const { error } = await fetchResetUserPassword(id);
+const { bool: resetPwdVisible, setTrue: openResetPwd } = useBoolean();
 
-      if (!error) {
-        window.$message?.success($t('common.updateSuccess'));
-      }
-    }
-  });
+/** Target user of the reset-password modal */
+const resetPwdUser = ref<{ id: string; username: string }>({ id: '', username: '' });
+
+function handleResetPassword(row: Api.SystemManage.User) {
+  resetPwdUser.value = { id: row.id, username: row.username };
+  openResetPwd();
 }
 
 function handleSetState(row: Api.SystemManage.User, enable: boolean) {
-  window.$dialog?.warning({
-    title: $t('common.tip'),
+  showConfirmDialog({
     content: $t(enable ? 'page.manage.user.enableConfirm' : 'page.manage.user.disableConfirm', { name: row.username }),
     positiveText: $t(enable ? 'common.confirmEnable' : 'common.confirmDisable'),
-    negativeText: $t('common.cancel'),
-    onPositiveClick: async () => {
+    onConfirm: async () => {
       const { error } = await fetchToggleUserState(row.id, enable);
 
       if (!error) {
@@ -288,7 +324,8 @@ function handleSetState(row: Api.SystemManage.User, enable: boolean) {
 /** Row action handlers, dispatched by the backend button `click` */
 const rowActionHandlers: Record<string, (row: Api.SystemManage.User) => void> = {
   update: row => handleEditUser(row.id),
-  resetPassword: row => handleResetPassword(row.id),
+  detail: row => handleUserDetail(row.id),
+  resetPassword: handleResetPassword,
   enable: row => handleSetState(row, true),
   disable: row => handleSetState(row, false)
 };
@@ -322,19 +359,11 @@ async function handleSubmitted() {
       <template #header>
         <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData">
           <template #default>
-            <NButton
-              v-for="button in toolbarButtons"
-              :key="button.id"
-              size="small"
-              ghost
-              type="primary"
-              @click="handleToolbarAction(button)"
-            >
-              <template v-if="button.icon" #icon>
-                <SvgIcon :icon="button.icon" />
-              </template>
-              {{ getButtonLabel(button) }}
-            </NButton>
+            <TableToolbarButtons
+              :buttons="toolbarButtons"
+              :disabled="isToolbarButtonDisabled"
+              @select="handleToolbarAction"
+            />
           </template>
           <template #export>
             <TableExportButton :api="() => fetchUserExport({ ...params, exportItems })" />
@@ -360,6 +389,11 @@ async function handleSubmitted() {
       :operate-type="operateType"
       :row="editRow"
       @submitted="handleSubmitted"
+    />
+    <UserResetPasswordModal
+      v-model:visible="resetPwdVisible"
+      :user-id="resetPwdUser.id"
+      :username="resetPwdUser.username"
     />
   </div>
 </template>

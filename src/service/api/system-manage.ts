@@ -34,9 +34,14 @@ export function fetchUpdateUser(data: Api.SystemManage.UserForm) {
   return request<string>({ url: '/system/user/update', method: 'post', data });
 }
 
-/** reset user password */
-export function fetchResetUserPassword(id: string) {
-  return request<string>({ url: '/system/user/resetPassword', method: 'post', data: { id } });
+/**
+ * Reset user password
+ *
+ * @param id user id
+ * @param password the custom password to set
+ */
+export function fetchResetUserPassword(id: string, password: string) {
+  return request<string>({ url: '/system/user/resetPassword', method: 'post', data: { id, password } });
 }
 
 /** enable/disable user */
@@ -106,6 +111,29 @@ export function fetchGetMenuTree() {
   return request<Api.SystemManage.MenuNode[]>({ url: '/system/menu/tree' });
 }
 
+/** get the whole menu tree (all menus, for management) */
+export function fetchGetMenuWholeTree() {
+  return request<Api.SystemManage.MenuNode[]>({ url: '/system/menu/wholeTree' });
+}
+
+/**
+ * Get a single menu node detail
+ *
+ * @param id menu id
+ */
+export function fetchGetMenuDetail(id: string) {
+  return request<Api.SystemManage.MenuNode>({ url: '/system/menu/detail', method: 'post', data: { id } });
+}
+
+/**
+ * Get a single button node detail
+ *
+ * @param id button id
+ */
+export function fetchGetButtonDetail(id: string) {
+  return request<Api.SystemManage.MenuNode>({ url: '/system/button/detail', method: 'post', data: { id } });
+}
+
 /** create menu */
 export function fetchCreateMenu(data: Api.SystemManage.MenuForm) {
   return request<string>({ url: '/system/menu', method: 'post', data });
@@ -119,4 +147,42 @@ export function fetchUpdateMenu(data: Api.SystemManage.MenuForm) {
 /** delete menu */
 export function fetchDeleteMenu(data: Api.SystemManage.MenuDeleteForm) {
   return request<string>({ url: '/system/menu/delete', method: 'post', data });
+}
+
+/**
+ * Enable/disable a menu node
+ *
+ * @param id menu id
+ * @param enable whether to enable
+ */
+export function fetchToggleMenuState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/menu/enable' : '/system/menu/disable',
+    method: 'post',
+    data: { id }
+  });
+}
+
+/** create button (system/button) */
+export function fetchCreateButton(data: Api.SystemManage.ButtonForm) {
+  return request<string>({ url: '/system/button', method: 'post', data });
+}
+
+/** update button */
+export function fetchUpdateButton(data: Api.SystemManage.ButtonForm) {
+  return request<string>({ url: '/system/button/update', method: 'post', data });
+}
+
+/**
+ * Enable/disable a button node
+ *
+ * @param id button id
+ * @param enable whether to enable
+ */
+export function fetchToggleButtonState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/button/enable' : '/system/button/disable',
+    method: 'post',
+    data: { id }
+  });
 }

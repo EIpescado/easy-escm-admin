@@ -68,18 +68,34 @@ async function handleSubmit() {
 
 <template>
   <NModal v-model:show="visible" preset="card" :title="title" class="w-560px">
-    <NForm ref="formRef" :model="model" :rules="rules" label-placement="left" :label-width="80">
-      <NFormItem :label="$t('page.manage.role.roleCode')" path="roleCode">
+    <NForm
+      ref="formRef"
+      :model="model"
+      :rules="rules"
+      label-placement="left"
+      require-mark-placement="left"
+      :label-width="110"
+    >
+      <NFormItem path="roleCode">
+        <template #label>
+          <FormLabel :label="$t('page.manage.role.roleCode')" />
+        </template>
         <NInput
           v-model:value="model.roleCode"
           :disabled="operateType === 'edit'"
           :placeholder="$t('page.manage.role.roleCode')"
         />
       </NFormItem>
-      <NFormItem :label="$t('page.manage.role.roleName')" path="roleName">
+      <NFormItem path="roleName">
+        <template #label>
+          <FormLabel :label="$t('page.manage.role.roleName')" />
+        </template>
         <NInput v-model:value="model.roleName" :placeholder="$t('page.manage.role.roleName')" />
       </NFormItem>
-      <NFormItem :label="$t('page.manage.role.remark')" path="remark">
+      <NFormItem path="remark">
+        <template #label>
+          <FormLabel :label="$t('page.manage.role.remark')" />
+        </template>
         <NInput v-model:value="model.remark" type="textarea" :rows="3" :placeholder="$t('page.manage.role.remark')" />
       </NFormItem>
     </NForm>

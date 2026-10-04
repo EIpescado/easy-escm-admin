@@ -317,11 +317,26 @@ declare namespace App {
         updateContent: string;
         updateConfirm: string;
         updateCancel: string;
+        user: {
+          resetPassword: string;
+        };
+        role: {
+          bindMenu: string;
+        };
+        menu: {
+          createSubMenu: string;
+          edit: string;
+        };
+        button: {
+          create: string;
+          edit: string;
+        };
       };
       common: {
         action: string;
         add: string;
         addSuccess: string;
+        back: string;
         backToHome: string;
         batchDelete: string;
         cancel: string;
@@ -334,10 +349,13 @@ declare namespace App {
         confirm: string;
         confirmEnable: string;
         confirmDisable: string;
+        create: string;
         delete: string;
         deleteSuccess: string;
         confirmDelete: string;
+        disable: string;
         edit: string;
+        enable: string;
         warning: string;
         error: string;
         export: string;
@@ -365,19 +383,6 @@ declare namespace App {
           yes: string;
           no: string;
         };
-      };
-      button: {
-        add: string;
-        search: string;
-        update: string;
-        resetPassword: string;
-        enable: string;
-        disable: string;
-        detail: string;
-        orgList: string;
-        bindMenu: string;
-        menuIds: string;
-        roleSelect: string;
       };
       request: {
         logout: string;
@@ -551,6 +556,11 @@ declare namespace App {
             registerTime: string;
             resetPassword: string;
             resetPasswordConfirm: string;
+            resetPasswordTip: string;
+            newPassword: string;
+            newPasswordPlaceholder: string;
+            confirmPassword: string;
+            confirmPasswordPlaceholder: string;
             enableConfirm: string;
             disableConfirm: string;
             state: {
@@ -576,16 +586,72 @@ declare namespace App {
           menu: {
             parent: string;
             name: string;
+            buttonName: string;
+            expandAll: string;
+            collapseAll: string;
             title: string;
+            menuName: string;
+            i18nKey: string;
+            type: string;
+            directory: string;
+            menu: string;
+            button: string;
+            status: string;
+            enabled: string;
+            disabled: string;
+            enableConfirm: string;
+            disableConfirm: string;
             path: string;
             component: string;
             icon: string;
+            localIcon: string;
+            iconFontSize: string;
+            roles: string;
             order: string;
+            sn: string;
+            keepAlive: string;
+            constant: string;
+            href: string;
+            activeMenu: string;
+            multiTab: string;
+            fixedIndexInTab: string;
+            query: string;
+            queryKey: string;
+            queryValue: string;
+            props: string;
             cached: string;
             hidden: string;
             root: string;
             iconPlaceholder: string;
             componentPlaceholder: string;
+            click: string;
+            buttonPosition: string;
+            tips: {
+              parent: string;
+              name: string;
+              buttonName: string;
+              title: string;
+              i18nKey: string;
+              icon: string;
+              localIcon: string;
+              iconFontSize: string;
+              sn: string;
+              path: string;
+              component: string;
+              roles: string;
+              href: string;
+              activeMenu: string;
+              order: string;
+              keepAlive: string;
+              constant: string;
+              hidden: string;
+              multiTab: string;
+              fixedIndexInTab: string;
+              query: string;
+              props: string;
+              click: string;
+              position: string;
+            };
           };
         };
         home: {

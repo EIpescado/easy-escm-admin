@@ -127,6 +127,8 @@ declare namespace Api {
       id: string;
       /** button label */
       name: string;
+      /** i18n key of the button label */
+      i18nKey?: string;
       /** sort number */
       sn?: number;
       /** iconify icon name */
@@ -165,29 +167,63 @@ declare namespace Api {
     interface MenuNode {
       id: string;
       pid: string;
+      /** whether the node comes from `system_button` rather than `system_menu` */
+      beButton?: boolean;
+      /** component name (menu) / button name (button) */
       name: string;
       path: string;
       component: string;
       meta: MenuMeta | null;
       props: Record<string, unknown> | null;
-      enabled: boolean;
+      /** permission codes of the node */
+      permissions?: string[];
+      /** button click action, only on button nodes */
+      click?: string;
+      /** button i18n key, only on button nodes */
+      i18nKey?: string;
+      /** button position, only on button nodes */
+      position?: string;
+      /** state label, e.g. `启用` / `禁用` */
+      state?: string;
+      /** state enum name, e.g. `ON` / `OFF` */
+      stateEnum?: string;
+      /** sort number */
+      sn?: number;
       children?: MenuNode[];
     }
 
+    /** menu form, aligned with backend SystemMenuFo */
     interface MenuForm {
       id?: string;
+      /** parent id, root is `-1` */
       pid: string;
-      title: string;
-      routerName: string;
-      component: string;
+      /** component name, must be unique */
+      name: string;
       path: string;
-      query?: string;
+      component: string;
+      /** route meta */
+      meta: MenuMeta;
+      /** props passed to the route component */
+      props?: Record<string, unknown> | null;
+      /** permission codes of the menu */
+      permissions?: string[];
+      /** sort number */
+      sn: number;
+    }
+
+    /** button form, aligned with backend SystemButtonFo */
+    interface ButtonForm {
+      id?: string;
+      name: string;
+      /** owning menu id */
+      menuId: string;
+      sn: number;
       icon?: string;
-      cached?: boolean;
-      hidden?: boolean;
-      activeMenu?: string;
-      iFrame?: boolean;
-      sortNo: number;
+      position?: string;
+      click?: string;
+      i18nKey?: string;
+      /** permission codes of the button */
+      permissions?: string[];
     }
 
     interface MenuDeleteForm {

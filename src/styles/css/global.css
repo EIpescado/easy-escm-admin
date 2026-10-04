@@ -13,3 +13,9 @@ html {
   overflow-x: hidden;
   color: rgb(var(--base-text-color));
 }
+
+/* form labels: keep on a single line, truncate the overflow (full text via tooltip) */
+.n-form-item-label__text {
+  min-width: 0;
+  overflow: hidden;
+}

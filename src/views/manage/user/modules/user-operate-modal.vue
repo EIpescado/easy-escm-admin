@@ -46,7 +46,7 @@ const rules: FormRules = {
   roleIds: {
     required: true,
     type: 'array',
-    message: $t('form.required'),
+    message: () => $t('form.required'),
     trigger: ['change', 'blur']
   }
 };
@@ -85,20 +85,42 @@ async function handleSubmit() {
 
 <template>
   <NModal v-model:show="visible" preset="card" :title="title" class="w-560px">
-    <NForm ref="formRef" :model="model" :rules="rules" label-placement="left" :label-width="80">
-      <NFormItem :label="$t('page.manage.user.username')" path="username">
+    <NForm
+      ref="formRef"
+      :model="model"
+      :rules="rules"
+      label-placement="left"
+      require-mark-placement="left"
+      :label-width="110"
+    >
+      <NFormItem path="username">
+        <template #label>
+          <FormLabel :label="$t('page.manage.user.username')" />
+        </template>
         <NInput v-model:value="model.username" :placeholder="$t('page.manage.user.username')" />
       </NFormItem>
-      <NFormItem :label="$t('page.manage.user.nickname')" path="nickname">
+      <NFormItem path="nickname">
+        <template #label>
+          <FormLabel :label="$t('page.manage.user.nickname')" />
+        </template>
         <NInput v-model:value="model.nickname" :placeholder="$t('page.manage.user.nickname')" />
       </NFormItem>
-      <NFormItem :label="$t('page.manage.user.phone')" path="phone">
+      <NFormItem path="phone">
+        <template #label>
+          <FormLabel :label="$t('page.manage.user.phone')" />
+        </template>
         <NInput v-model:value="model.phone" :placeholder="$t('page.manage.user.phone')" />
       </NFormItem>
-      <NFormItem :label="$t('page.manage.user.mail')" path="mail">
+      <NFormItem path="mail">
+        <template #label>
+          <FormLabel :label="$t('page.manage.user.mail')" />
+        </template>
         <NInput v-model:value="model.mail" :placeholder="$t('page.manage.user.mail')" />
       </NFormItem>
-      <NFormItem :label="$t('page.manage.user.role')" path="roleIds">
+      <NFormItem path="roleIds">
+        <template #label>
+          <FormLabel :label="$t('page.manage.user.role')" />
+        </template>
         <NSelect v-model:value="model.roleIds" multiple :options="roleOptions" />
       </NFormItem>
     </NForm>
