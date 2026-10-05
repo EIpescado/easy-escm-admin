@@ -14,6 +14,8 @@ interface Props {
   row: Api.SystemManage.MenuNode | null;
   /** force button mode when adding */
   addButton?: boolean;
+  /** add a top-level menu: `pid` empty and component fixed to `root` */
+  addTopMenu?: boolean;
   parentId: string;
   rootPid: string;
   tree: Api.SystemManage.MenuNode[];
@@ -42,6 +44,7 @@ interface EditModel {
   pid: string;
   name: string;
   sn: number;
+  permission: string;
   permissions: string[];
   // menu
   path: string;
@@ -80,6 +83,7 @@ function createEmptyModel(): EditModel {
     pid: props.rootPid,
     name: '',
     sn: 1,
+    permission: '',
     permissions: [],
     path: '',
     component: '',
@@ -99,6 +103,7 @@ function fromNode(node: Api.SystemManage.MenuNode): EditModel {
     pid: node.pid,
     name: node.name,
     sn: node.sn ?? 1,
+    permission: node.permission ?? '',
     permissions: node.permissions ?? [],
     path: node.path ?? '',
     component: node.component ?? '',
@@ -128,8 +133,10 @@ const roleOptions = ref<Api.SystemManage.Selector<string>[]>([]);
 
 const title = computed(() => {
   if (props.operateType === 'edit') return $t('common.edit');
+  if (props.addButton) return $t('system.button.create');
+  if (props.addTopMenu) return $t('system.menu.createTopMenu');
 
-  return props.addButton ? $t('system.button.create') : $t('common.add');
+  return $t('common.add');
 });
 
 /** parse the props key-value pairs into an object for the request */
@@ -194,9 +201,11 @@ const positionOptions = [
 
 /** common layout component presets; `tag` below also allows custom values */
 const componentOptions = [
+  { label: 'root', value: 'root' },
   { label: 'layout.base', value: 'layout.base' },
   { label: 'layout.blank', value: 'layout.blank' },
-  { label: 'layout.base$view.iframe-page', value: 'layout.base$view.iframe-page' }
+  { label: 'layout.base$view.iframe-page', value: 'layout.base$view.iframe-page' },
+  { label: 'layout.blank$view.iframe-page', value: 'layout.blank$view.iframe-page' }
 ];
 
 function transformOptions(nodes: Api.SystemManage.MenuNode[]): TreeSelectOption[] {
@@ -226,6 +235,12 @@ watch(visible, async val => {
     props.row ? fromNode(props.row) : { pid: props.parentId, beButton: Boolean(props.addButton) }
   );
 
+  // a top-level menu has no parent and its component is fixed to `root`
+  if (props.addTopMenu) {
+    model.pid = '';
+    model.component = 'root';
+  }
+
   if (!roleOptions.value.length) {
     const { data: roles } = await fetchRoleSelect();
     roleOptions.value = (roles ?? []).map(role => ({ ...role, value: String(role.value) }));
@@ -252,12 +267,14 @@ function normalizeMenuMeta(): MenuMeta {
 function buildMenuRequest(isAdd: boolean) {
   const payload: Api.SystemManage.MenuForm = {
     id: model.id,
-    pid: model.pid || props.rootPid,
+    // top-level menus have an empty pid; the component path is fixed to `root`
+    pid: props.addTopMenu ? '' : model.pid || props.rootPid,
     name: model.name,
     path: model.path,
     component: model.component,
     meta: normalizeMenuMeta(),
     props: parseMenuProps(),
+    permission: model.permission || undefined,
     permissions: model.permissions,
     sn: model.sn
   };
@@ -275,6 +292,7 @@ function buildButtonRequest(isAdd: boolean) {
     position: model.position || undefined,
     click: model.click || undefined,
     i18nKey: model.i18nKey || undefined,
+    permission: model.permission || undefined,
     permissions: model.permissions
   };
 
@@ -306,7 +324,7 @@ async function handleSubmit() {
         :label-width="110"
       >
         <div class="grid grid-cols-2 gap-x-16px gap-y-4px">
-          <NFormItem v-if="!model.beButton" path="pid">
+          <NFormItem v-if="!model.beButton && !addTopMenu" path="pid">
             <template #label>
               <FormLabel :label="$t('page.manage.menu.parent')" :tip="$t('page.manage.menu.tips.parent')" />
             </template>
@@ -343,6 +361,12 @@ async function handleSubmit() {
               <FormLabel :label="$t('page.manage.menu.sn')" :tip="$t('page.manage.menu.tips.sn')" />
             </template>
             <NInputNumber v-model:value="model.sn" :min="0" class="w-full" />
+          </NFormItem>
+          <NFormItem path="permission">
+            <template #label>
+              <FormLabel :label="$t('page.manage.menu.permission')" :tip="$t('page.manage.menu.tips.permission')" />
+            </template>
+            <NInput v-model:value="model.permission" :placeholder="$t('page.manage.menu.permission')" />
           </NFormItem>
 
           <template v-if="model.beButton">
@@ -387,6 +411,7 @@ async function handleSubmit() {
                 v-model:value="model.component"
                 tag
                 filterable
+                :disabled="addTopMenu"
                 :options="componentOptions"
                 :placeholder="$t('page.manage.menu.componentPlaceholder')"
               />

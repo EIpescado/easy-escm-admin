@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, h, ref, watch, type VNode } from 'vue';
-import { NButton, NSpace, NTag } from 'naive-ui';
+import { NButton, NEllipsis, NSpace, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import {
   fetchDeleteMenu,
@@ -45,11 +45,12 @@ function isMenuEnabled(row: Api.SystemManage.MenuNode) {
   return stateEnum ? ENABLED_STATE_ENUMS.has(String(stateEnum).toUpperCase()) : true;
 }
 
-/** Menu node type: directory / menu / button */
-type MenuNodeType = 'directory' | 'menu' | 'button';
+/** Menu node type: root / directory / menu / button */
+type MenuNodeType = 'root' | 'directory' | 'menu' | 'button';
 
 /** label i18n keys of the menu node types */
 const MENU_TYPE_LABEL_KEYS: Record<MenuNodeType, App.I18n.I18nKey> = {
+  root: 'page.manage.menu.root',
   directory: 'page.manage.menu.directory',
   menu: 'page.manage.menu.menu',
   button: 'page.manage.menu.button'
@@ -57,14 +58,16 @@ const MENU_TYPE_LABEL_KEYS: Record<MenuNodeType, App.I18n.I18nKey> = {
 
 /** tag type of the menu node types */
 const MENU_TYPE_TAG_TYPES = {
+  root: 'default',
   directory: 'info',
   menu: 'success',
   button: 'warning'
 } as const;
 
-/** node type: button > directory (component `layout.base`) > menu */
+/** node type: button > root (component `root`) > directory (component `layout.base`) > menu */
 function getMenuNodeType(row: Api.SystemManage.MenuNode): MenuNodeType {
   if (row.beButton) return 'button';
+  if (row.component === 'root') return 'root';
   if (row.component === 'layout.base') return 'directory';
 
   return 'menu';
@@ -133,6 +136,7 @@ const searchFields = computed<QueryField[]>(() => [
     defaultType: 'eq',
     types: ['eq', 'ne'],
     options: [
+      { label: $t('page.manage.menu.root'), value: 'root' },
       { label: $t('page.manage.menu.directory'), value: 'directory' },
       { label: $t('page.manage.menu.menu'), value: 'menu' },
       { label: $t('page.manage.menu.button'), value: 'button' }
@@ -255,10 +259,21 @@ function collectMenuKeys(nodes: Api.SystemManage.MenuNode[]): string[] {
 /** expanded row keys of the tree table, kept in sync with the filtered data */
 const expandedRowKeys = ref<string[]>([]);
 
+/** whether the tree has rendered once; the tree stays collapsed when first entering the page */
+const menuTreeRendered = ref(false);
+
 watch(
   filteredMenuTree,
   nodes => {
-    expandedRowKeys.value = collectMenuKeys(nodes);
+    // keep the tree collapsed on the first load; expand all afterwards (e.g. after filtering / refreshing)
+    if (!nodes.length) {
+      expandedRowKeys.value = [];
+
+      return;
+    }
+
+    expandedRowKeys.value = menuTreeRendered.value ? collectMenuKeys(nodes) : [];
+    menuTreeRendered.value = true;
   },
   { immediate: true }
 );
@@ -280,7 +295,7 @@ const { toolbarButtons, rowButtons } = usePageButtons();
  * Button state rules.
  *
  * - `enable` / `disable`: disabled when the node is already in that state
- * - `create` / `createSubMenu`: only allowed under a directory
+ * - `create` / `createSubMenu`: only allowed under a directory or a root
  * - `createButton`: only allowed under a menu
  * - `editMenu`: allowed under a directory or a menu
  * - `editButton`: only allowed under a button
@@ -288,8 +303,8 @@ const { toolbarButtons, rowButtons } = usePageButtons();
 const menuButtonStateRules: PageButtonStateRules<Api.SystemManage.MenuNode> = {
   enable: ({ rows }) => rows.every(row => isMenuEnabled(row)),
   disable: ({ rows }) => rows.every(row => !isMenuEnabled(row)),
-  create: ({ rows }) => rows.some(row => getMenuNodeType(row) !== 'directory'),
-  createSubMenu: ({ rows }) => rows.some(row => getMenuNodeType(row) !== 'directory'),
+  create: ({ rows }) => rows.some(row => !['directory', 'root'].includes(getMenuNodeType(row))),
+  createSubMenu: ({ rows }) => rows.some(row => !['directory', 'root'].includes(getMenuNodeType(row))),
   createButton: ({ rows }) => rows.some(row => getMenuNodeType(row) !== 'menu'),
   editMenu: ({ rows }) => rows.some(row => getMenuNodeType(row) === 'button'),
   editButton: ({ rows }) => rows.some(row => getMenuNodeType(row) !== 'button')
@@ -303,12 +318,25 @@ const editingRow = ref<Api.SystemManage.MenuNode | null>(null);
 const parentId = ref<string>(rootPid.value);
 /** whether the add form is creating a button instead of a menu */
 const addButtonMode = ref(false);
+/** whether the add form is creating a top-level menu (platform root, `pid` empty and component `root`) */
+const addTopMenuMode = ref(false);
 
 function handleAdd(row?: Api.SystemManage.MenuNode) {
   operateType.value = 'add';
   addButtonMode.value = false;
+  addTopMenuMode.value = false;
   editingRow.value = null;
   parentId.value = row?.id ?? rootPid.value;
+  openModal();
+}
+
+/** add a top-level menu: `pid` is empty and the component is fixed to `root` */
+function handleCreateTopMenu() {
+  operateType.value = 'add';
+  addButtonMode.value = false;
+  addTopMenuMode.value = true;
+  editingRow.value = null;
+  parentId.value = '';
   openModal();
 }
 
@@ -316,6 +344,7 @@ function handleAdd(row?: Api.SystemManage.MenuNode) {
 function handleAddButton(row: Api.SystemManage.MenuNode) {
   operateType.value = 'add';
   addButtonMode.value = true;
+  addTopMenuMode.value = false;
   editingRow.value = null;
   parentId.value = row.id;
   openModal();
@@ -329,6 +358,7 @@ async function handleEdit(row: Api.SystemManage.MenuNode) {
 
   operateType.value = 'edit';
   addButtonMode.value = false;
+  addTopMenuMode.value = false;
   editingRow.value = data;
   parentId.value = data.pid;
   openModal();
@@ -398,7 +428,10 @@ function handleRowAction(row: Api.SystemManage.MenuNode, key: string) {
 
 /** Toolbar buttons (position `top`), dispatched by the backend button `click` */
 function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
-  const handlers: Record<string, () => void> = { create: () => handleAdd() };
+  const handlers: Record<string, () => void> = {
+    create: () => handleAdd(),
+    createTopMenu: handleCreateTopMenu
+  };
 
   const handler = handlers[button.click ?? ''];
 
@@ -439,17 +472,19 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.MenuNode>[]>(() =>
     key: 'title',
     title: $t('page.manage.menu.title'),
     minWidth: 200,
+    // used to keep the tree indent / expand trigger, the type tag and the title on a single line
+    className: 'menu-title-cell',
     // type tag merged with the title
     render: (row: Api.SystemManage.MenuNode) => {
       const type = getMenuNodeType(row);
 
-      return h('div', { class: 'inline-flex items-center gap-6px align-middle' }, [
+      return h('div', { class: 'menu-title-content inline-flex items-center gap-6px align-middle' }, [
         h(
           NTag,
-          { type: MENU_TYPE_TAG_TYPES[type], size: 'small', bordered: false },
+          { type: MENU_TYPE_TAG_TYPES[type], size: 'small', bordered: false, class: 'shrink-0' },
           { default: () => $t(MENU_TYPE_LABEL_KEYS[type]) }
         ),
-        h('span', row.meta?.title || row.name)
+        h(NEllipsis, { tooltip: true, class: 'min-w-0' }, { default: () => row.meta?.title || row.name })
       ]);
     }
   });
@@ -486,14 +521,20 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.MenuNode>[]>(() =>
         if (icon) iconNodes.push(h(icon));
         if (localIcon) iconNodes.push(h(localIcon));
 
-        return h('div', { class: 'flex items-center gap-6px' }, [...iconNodes, h('span', label || '-')]);
+        // hide the placeholder dash when the node only has icon(s) but no name
+        if (label) iconNodes.push(h('span', label));
+        else if (!iconNodes.length) iconNodes.push(h('span', '-'));
+
+        return h('div', { class: 'flex items-center gap-6px' }, iconNodes);
       }
     },
     {
       key: 'i18nKey',
       title: $t('page.manage.menu.i18nKey'),
       minWidth: 180,
-      render: (row: Api.SystemManage.MenuNode) => row.meta?.i18nKey || row.i18nKey || '-'
+      // keep on a single line and show a tooltip when overflowing
+      render: (row: Api.SystemManage.MenuNode) =>
+        h(NEllipsis, { tooltip: true }, { default: () => row.meta?.i18nKey || row.i18nKey || '-' })
     },
     {
       key: 'name',
@@ -505,14 +546,28 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.MenuNode>[]>(() =>
       key: 'path',
       title: $t('page.manage.menu.path'),
       minWidth: 180,
-      // buttons have no path; show their click action instead
-      render: (row: Api.SystemManage.MenuNode) => (row.beButton ? row.click || '-' : row.path || '-')
+      // buttons have no path; show their click action instead; keep on a single line and show a tooltip when overflowing
+      render: (row: Api.SystemManage.MenuNode) => {
+        const text = row.beButton ? row.click || '-' : row.path || '-';
+
+        return h(NEllipsis, { tooltip: true }, { default: () => text });
+      }
     },
     {
       key: 'component',
       title: $t('page.manage.menu.component'),
       minWidth: 200,
-      render: (row: Api.SystemManage.MenuNode) => row.component || '-'
+      // keep on a single line and show a tooltip when overflowing
+      render: (row: Api.SystemManage.MenuNode) =>
+        h(NEllipsis, { tooltip: true }, { default: () => row.component || '-' })
+    },
+    {
+      key: 'permission',
+      title: $t('page.manage.menu.permission'),
+      minWidth: 160,
+      // keep on a single line and show a tooltip when overflowing
+      render: (row: Api.SystemManage.MenuNode) =>
+        h(NEllipsis, { tooltip: true }, { default: () => row.permission || '-' })
     },
     {
       key: 'status',
@@ -610,6 +665,7 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.MenuNode>[]>(() =>
       :operate-type="operateType"
       :row="editingRow"
       :add-button="addButtonMode"
+      :add-top-menu="addTopMenuMode"
       :parent-id="parentId"
       :root-pid="rootPid"
       :tree="menuTree"
@@ -630,5 +686,15 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.MenuNode>[]>(() =>
 :deep(.n-data-table-expand-trigger),
 :deep(.n-data-table-expand-placeholder) {
   vertical-align: middle;
+}
+
+/* keep the tree indent / expand trigger, the type tag and the title on a single line */
+:deep(.n-data-table-td.menu-title-cell) {
+  white-space: nowrap;
+}
+
+/* reserve room for the tree indent + expand trigger so the tag/title box can never wrap below them */
+:deep(.menu-title-content) {
+  max-width: calc(100% - var(--indent-offset, 0) * 16px - 24px);
 }
 </style>

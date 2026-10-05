@@ -175,6 +175,8 @@ declare namespace Api {
       component: string;
       meta: MenuMeta | null;
       props: Record<string, unknown> | null;
+      /** permission code of the node */
+      permission?: string;
       /** permission codes of the node */
       permissions?: string[];
       /** button click action, only on button nodes */
@@ -205,6 +207,8 @@ declare namespace Api {
       meta: MenuMeta;
       /** props passed to the route component */
       props?: Record<string, unknown> | null;
+      /** permission code of the menu */
+      permission?: string;
       /** permission codes of the menu */
       permissions?: string[];
       /** sort number */
@@ -222,6 +226,8 @@ declare namespace Api {
       position?: string;
       click?: string;
       i18nKey?: string;
+      /** permission code of the button */
+      permission?: string;
       /** permission codes of the button */
       permissions?: string[];
     }

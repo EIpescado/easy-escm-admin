@@ -13,6 +13,7 @@ const local: App.I18n.Schema = {
     },
     menu: {
       createSubMenu: 'Create Submenu',
+      createTopMenu: 'Create Top Menu',
       edit: 'Edit Menu'
     },
     button: {
@@ -348,6 +349,7 @@ const local: App.I18n.Schema = {
         title: 'Menu Title',
         menuName: 'Menu Name',
         i18nKey: 'i18n Key',
+        permission: 'Permission Code',
         type: 'Type',
         directory: 'Directory',
         menu: 'Menu',
@@ -388,6 +390,7 @@ const local: App.I18n.Schema = {
           buttonName: 'Button display name',
           title: 'Menu title, used when no i18n key is configured',
           i18nKey: 'i18n key; when set it is used for multi-language (title is ignored)',
+          permission: 'Permission code used by the backend for authorization; must be globally unique',
           icon: 'Iconify icon name, e.g. mdi:home',
           localIcon: 'Local icon name under src/assets/svg-icon; takes priority over the Iconify icon',
           iconFontSize: 'Icon font size in px',

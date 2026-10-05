@@ -325,6 +325,7 @@ declare namespace App {
         };
         menu: {
           createSubMenu: string;
+          createTopMenu: string;
           edit: string;
         };
         button: {
@@ -592,6 +593,7 @@ declare namespace App {
             title: string;
             menuName: string;
             i18nKey: string;
+            permission: string;
             type: string;
             directory: string;
             menu: string;
@@ -632,6 +634,7 @@ declare namespace App {
               buttonName: string;
               title: string;
               i18nKey: string;
+              permission: string;
               icon: string;
               localIcon: string;
               iconFontSize: string;

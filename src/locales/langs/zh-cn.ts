@@ -13,6 +13,7 @@ const local: App.I18n.Schema = {
     },
     menu: {
       createSubMenu: '新增子菜单',
+      createTopMenu: '新增顶级菜单',
       edit: '编辑菜单'
     },
     button: {
@@ -344,6 +345,7 @@ const local: App.I18n.Schema = {
         title: '菜单标题',
         menuName: '菜单名称',
         i18nKey: '国际化键',
+        permission: '权限码',
         type: '类型',
         directory: '目录',
         menu: '菜单',
@@ -384,6 +386,7 @@ const local: App.I18n.Schema = {
           buttonName: '按钮显示名称',
           title: '菜单标题，未配置国际化键时使用',
           i18nKey: '国际化键，配置后优先用于多语言显示（此时 title 被忽略）',
+          permission: '权限标识，用于后端接口鉴权，需全局唯一',
           icon: 'Iconify 图标名，如 mdi:home',
           localIcon: '本地图标名（src/assets/svg-icon 下），设置后优先于 Iconify 图标',
           iconFontSize: '图标字号，单位 px',
