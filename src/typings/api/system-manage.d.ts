@@ -115,6 +115,15 @@ declare namespace Api {
       remark?: string;
     }
 
+    /** option returned by `/system/role/select` */
+    interface RoleOption {
+      /** role id (backend Long is serialized as string) */
+      id: string;
+      roleCode: string;
+      roleName: string;
+      remark?: string | null;
+    }
+
     interface RoleBindMenuForm {
       id: string;
       menuIds: string[];
@@ -235,6 +244,84 @@ declare namespace Api {
     interface MenuDeleteForm {
       menuIds: string[];
       buttonIds?: string[];
+    }
+
+    /** dictionary (system_dict), aligned with backend SystemDictTo */
+    interface Dict {
+      id: string;
+      /** dictionary code */
+      code: string;
+      /** dictionary name */
+      name: string;
+      /** state label */
+      state?: string;
+      /** state enum name, e.g. `ON` / `OFF` */
+      stateEnum?: string;
+      /** remark */
+      remark?: string | null;
+      /** whether the dictionary needs authorization */
+      whetherAuth?: boolean | null;
+    }
+
+    /** dictionary form, aligned with backend SystemDictFo */
+    interface DictForm {
+      id?: string;
+      code: string;
+      name: string;
+      state?: string;
+      remark?: string | null;
+      whetherAuth: boolean;
+    }
+
+    /** dictionary entry (system_dict_entry), aligned with backend SystemDictEntryTo */
+    interface DictEntry {
+      id: string;
+      /** entry code */
+      code: string;
+      /** owning dictionary id */
+      pid?: string;
+      val?: string | null;
+      val2?: string | null;
+      val3?: string | null;
+      val4?: string | null;
+      /** state label, e.g. `启用` / `禁用` */
+      state?: string;
+      /** state enum name, e.g. `ON` / `OFF` */
+      stateEnum?: string;
+      remark?: string | null;
+      /** sort number */
+      sn?: number | null;
+    }
+
+    /** dictionary entry form, aligned with backend SystemDictEntryFo */
+    interface DictEntryForm {
+      id?: string;
+      code: string;
+      /** owning dictionary id */
+      pid?: string;
+      val?: string | null;
+      val2?: string | null;
+      val3?: string | null;
+      val4?: string | null;
+      state?: string;
+      remark?: string | null;
+      sn?: number | null;
+    }
+
+    /** user-dictionary relation, aligned with backend SystemUserDictVo */
+    interface UserDict {
+      userId: string;
+      /** whether the user owns all dictionaries */
+      allDict?: boolean;
+      /** dictionaries owned by the user */
+      dictIds: Dict[];
+    }
+
+    /** user-dictionary bind form, aligned with backend SystemUserDictFo */
+    interface UserDictForm {
+      userId: string;
+      allDict?: boolean;
+      dictIds?: string[];
     }
   }
 }

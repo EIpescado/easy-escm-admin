@@ -256,6 +256,8 @@ const local: App.I18n.Schema = {
     manage_user: 'User',
     manage_role: 'Role',
     manage_menu: 'Menu',
+    manage_dict: 'Dictionary',
+    'manage_user-dict': 'User Dictionary',
     'manage_user-detail': 'User Detail'
   },
   page: {
@@ -333,6 +335,7 @@ const local: App.I18n.Schema = {
         stateLabel: 'Status',
         menuAuth: 'Menu Auth',
         menuAuthSuccess: 'Authorized successfully',
+        selectRole: 'Select a role on the left',
         enableConfirm: 'Enable role "{name}"?',
         disableConfirm: 'Disable role "{name}"?',
         state: {
@@ -411,6 +414,31 @@ const local: App.I18n.Schema = {
           click: 'Action name dispatched by the front-end on click, e.g. create / edit / delete',
           position: 'Button position: top=toolbar, row=row action; custom values allowed'
         }
+      },
+      dict: {
+        code: 'Dict Code',
+        name: 'Dict Name',
+        stateLabel: 'Status',
+        remark: 'Remark',
+        whetherAuth: 'Requires Auth',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        enableConfirm: 'Enable dictionary "{name}"?',
+        disableConfirm: 'Disable dictionary "{name}"?',
+        entry: {
+          title: 'Dictionary Entries',
+          code: 'Entry Code',
+          val: 'Value',
+          val2: 'Value 2',
+          val3: 'Value 3',
+          val4: 'Value 4',
+          sn: 'Sort No',
+          remark: 'Remark'
+        },
+        allDict: 'All Dictionaries',
+        ownedDict: 'Owned Dictionaries',
+        selectUser: 'Select a user on the left',
+        selectDict: 'Select a dictionary on the left'
       }
     },
     home: {

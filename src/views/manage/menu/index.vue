@@ -18,6 +18,7 @@ import {
 } from '@/hooks/business/page-buttons';
 import { useSvgIcon } from '@/hooks/common/icon';
 import { showConfirmDialog } from '@/utils/common';
+import { getMenuNodeType, MENU_TYPE_LABEL_KEYS, MENU_TYPE_TAG_TYPES } from '@/utils/menu';
 import { getTableOperateColumnWidth } from '@/utils/table';
 import { $t } from '@/locales';
 import {
@@ -43,34 +44,6 @@ function isMenuEnabled(row: Api.SystemManage.MenuNode) {
   const { stateEnum } = row;
 
   return stateEnum ? ENABLED_STATE_ENUMS.has(String(stateEnum).toUpperCase()) : true;
-}
-
-/** Menu node type: root / directory / menu / button */
-type MenuNodeType = 'root' | 'directory' | 'menu' | 'button';
-
-/** label i18n keys of the menu node types */
-const MENU_TYPE_LABEL_KEYS: Record<MenuNodeType, App.I18n.I18nKey> = {
-  root: 'page.manage.menu.root',
-  directory: 'page.manage.menu.directory',
-  menu: 'page.manage.menu.menu',
-  button: 'page.manage.menu.button'
-};
-
-/** tag type of the menu node types */
-const MENU_TYPE_TAG_TYPES = {
-  root: 'default',
-  directory: 'info',
-  menu: 'success',
-  button: 'warning'
-} as const;
-
-/** node type: button > root (component `root`) > directory (component `layout.base`) > menu */
-function getMenuNodeType(row: Api.SystemManage.MenuNode): MenuNodeType {
-  if (row.beButton) return 'button';
-  if (row.component === 'root') return 'root';
-  if (row.component === 'layout.base') return 'directory';
-
-  return 'menu';
 }
 
 const loading = ref(false);

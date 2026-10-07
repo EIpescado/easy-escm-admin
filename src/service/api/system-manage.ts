@@ -84,17 +84,17 @@ export function fetchUpdateRole(data: Api.SystemManage.RoleForm) {
 
 /** get role selector options */
 export function fetchRoleSelect() {
-  return request<Api.SystemManage.Selector<string>[]>({ url: '/system/role/select', method: 'get' });
+  return request<Api.SystemManage.RoleOption[]>({ url: '/system/role/select', method: 'get' });
 }
 
-/** get role bound menu ids */
+/** get the bound ids of a role; the set contains both menu ids and button ids */
 export function fetchRoleMenuIds(roleId: string) {
-  return request<string[]>({ url: '/system/role/menuIds', method: 'post', data: { id: roleId } });
+  return request<string[]>({ url: '/system/role/menuAndButtonIds', method: 'post', data: { id: roleId } });
 }
 
 /** bind menus to role */
 export function fetchBindRoleMenu(data: Api.SystemManage.RoleBindMenuForm) {
-  return request<string>({ url: '/system/role/bindMenu', method: 'post', data });
+  return request<string>({ url: '/system/role/bind', method: 'post', data });
 }
 
 /** enable/disable role */
@@ -185,4 +185,106 @@ export function fetchToggleButtonState(id: string, enable: boolean) {
     method: 'post',
     data: { id }
   });
+}
+
+/** dictionary search (paged) */
+export function fetchDictSearch(data: Api.SystemManage.PageQo) {
+  return request<Api.SystemManage.PageResult<Api.SystemManage.Dict>>({
+    url: '/system/dict/search',
+    method: 'post',
+    data
+  });
+}
+
+/**
+ * Get a single dictionary detail
+ *
+ * @param id dictionary id
+ */
+export function fetchDictDetail(id: string) {
+  return request<Api.SystemManage.DictForm>({ url: '/system/dict/detail', method: 'post', data: { id } });
+}
+
+/** create dictionary */
+export function fetchCreateDict(data: Api.SystemManage.DictForm) {
+  return request<string>({ url: '/system/dict', method: 'post', data });
+}
+
+/** update dictionary */
+export function fetchUpdateDict(data: Api.SystemManage.DictForm) {
+  return request<string>({ url: '/system/dict/update', method: 'post', data });
+}
+
+/**
+ * Enable/disable a dictionary
+ *
+ * @param id dictionary id
+ * @param enable whether to enable
+ */
+export function fetchToggleDictState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/dict/enable' : '/system/dict/disable',
+    method: 'post',
+    data: { id }
+  });
+}
+
+/** dictionary entry search (paged) */
+export function fetchDictEntrySearch(data: Api.SystemManage.PageQo) {
+  return request<Api.SystemManage.PageResult<Api.SystemManage.DictEntry>>({
+    url: '/system/dictEntry/search',
+    method: 'post',
+    data
+  });
+}
+
+/**
+ * Get a single dictionary entry detail
+ *
+ * @param id entry id
+ */
+export function fetchDictEntryDetail(id: string) {
+  return request<Api.SystemManage.DictEntryForm>({ url: '/system/dictEntry/detail', method: 'post', data: { id } });
+}
+
+/** create dictionary entry */
+export function fetchCreateDictEntry(data: Api.SystemManage.DictEntryForm) {
+  return request<string>({ url: '/system/dictEntry', method: 'post', data });
+}
+
+/** update dictionary entry */
+export function fetchUpdateDictEntry(data: Api.SystemManage.DictEntryForm) {
+  return request<string>({ url: '/system/dictEntry/update', method: 'post', data });
+}
+
+/**
+ * Enable/disable a dictionary entry
+ *
+ * @param id entry id
+ * @param enable whether to enable
+ */
+export function fetchToggleDictEntryState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/dictEntry/enable' : '/system/dictEntry/disable',
+    method: 'post',
+    data: { id }
+  });
+}
+
+/**
+ * Get the dictionary relation of a user (owned dictionaries + all-dict flag)
+ *
+ * @param userId user id
+ */
+export function fetchUserDictDetail(userId: string) {
+  return request<Api.SystemManage.UserDict>({
+    url: '/system/dict/userDictDetail',
+    method: 'post',
+    data: { id: userId }
+  });
+}
+
+/** bind dictionaries to a user (overrides the previous relation) */
+export function fetchBindUserDict(data: Api.SystemManage.UserDictForm) {
+  return request<string>({ url: '/system/dict/bindUserDict', method: 'post', data });
 }

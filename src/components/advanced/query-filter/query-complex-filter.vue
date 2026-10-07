@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { useBreakpoints, useResizeObserver } from '@vueuse/core';
+import { useElementSize, useResizeObserver } from '@vueuse/core';
 import { $t } from '@/locales';
 import QueryValueEditor from './query-value-editor.vue';
 import {
@@ -37,13 +37,21 @@ const emit = defineEmits<{
   reset: [];
 }>();
 
-const breakpoints = useBreakpoints({ s: 640, l: 1280, xl: 1536 });
+const containerRef = ref<HTMLElement | null>(null);
 
-/** Columns per row, aligned with the responsive `span` below (NGrid breakpoints: s=640, l=1280, xl=1536) */
+const { width: containerWidth } = useElementSize(containerRef);
+
+/**
+ * Columns per row, based on the filter container width rather than the viewport, so the filter
+ * also adapts when it is placed in a narrow column (e.g. the left/right dictionary layout).
+ * Each condition needs roughly 272px (260px + gap).
+ */
 const columns = computed(() => {
-  if (breakpoints.smaller('s').value) return 1;
-  if (breakpoints.smaller('l').value) return 2;
-  if (breakpoints.smaller('xl').value) return 3;
+  const width = containerWidth.value;
+
+  if (width < 544) return 1;
+  if (width < 816) return 2;
+  if (width < 1088) return 3;
 
   return 4;
 });
@@ -205,13 +213,13 @@ function handleSearch() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-12px">
+  <div ref="containerRef" class="flex flex-col gap-12px">
     <div v-if="!fields.length" class="text-12px text-gray-400">{{ $t('queryFilter.empty') }}</div>
 
     <template v-else>
       <div ref="gridRef" :class="{ 'query-drawer': hasOverflow }" :style="hasOverflow ? drawerStyle : undefined">
-        <NGrid responsive="screen" item-responsive :x-gap="12" :y-gap="12">
-          <NGi v-for="(row, index) in rows" :key="`${row.condition.id}-${index}`" span="24 s:12 l:8 xl:6">
+        <NGrid :cols="columns" :x-gap="12" :y-gap="12">
+          <NGi v-for="(row, index) in rows" :key="`${row.condition.id}-${index}`" :span="1">
             <div
               class="query-condition min-h-34px flex items-center overflow-hidden border border-#e5e7eb rounded-6px transition-colors hover:border-#d9dde3 focus-within:border-primary dark:border-#33343a dark:hover:border-#3d3d42"
             >
@@ -255,19 +263,19 @@ function handleSearch() {
             </div>
           </NGi>
 
-          <NGi v-if="actionInline" span="24 s:12 l:8 xl:6">
+          <NGi v-if="actionInline" :span="1">
             <div class="query-actions min-h-34px flex flex-wrap items-center gap-8px">
-              <NButton size="small" type="primary" class="w-1/4" @click="handleSearch">
+              <NButton type="primary" class="h-34px w-1/4" @click="handleSearch">
                 {{ $t('common.search') }}
               </NButton>
-              <NButton size="small" class="w-1/4" @click="emit('reset')">{{ $t('common.reset') }}</NButton>
+              <NButton class="h-34px w-1/4" @click="emit('reset')">{{ $t('common.reset') }}</NButton>
             </div>
           </NGi>
         </NGrid>
       </div>
 
-      <NGrid v-if="!actionInline" responsive="screen" item-responsive :x-gap="12" :y-gap="12">
-        <NGi span="24 s:12 l:8 xl:6">
+      <NGrid v-if="!actionInline" :cols="columns" :x-gap="12" :y-gap="12">
+        <NGi :span="1">
           <div class="query-actions min-h-34px flex flex-wrap items-center gap-8px">
             <NButton v-if="hasOverflow" size="small" text type="primary" @click="toggleCollapsed">
               <template #icon>
@@ -278,10 +286,10 @@ function handleSearch() {
               </template>
               {{ collapsed ? $t('queryFilter.showMore') : $t('queryFilter.showLess') }}
             </NButton>
-            <NButton size="small" type="primary" class="w-1/4" @click="handleSearch">
+            <NButton type="primary" class="h-34px w-1/4" @click="handleSearch">
               {{ $t('common.search') }}
             </NButton>
-            <NButton size="small" class="w-1/4" @click="emit('reset')">{{ $t('common.reset') }}</NButton>
+            <NButton class="h-34px w-1/4" @click="emit('reset')">{{ $t('common.reset') }}</NButton>
           </div>
         </NGi>
       </NGrid>

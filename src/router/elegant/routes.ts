@@ -85,6 +85,15 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'manage_dict',
+        path: '/manage/dict',
+        component: 'view.manage_dict',
+        meta: {
+          title: 'manage_dict',
+          i18nKey: 'route.manage_dict'
+        }
+      },
+      {
         name: 'manage_menu',
         path: '/manage/menu',
         component: 'view.manage_menu',
@@ -118,6 +127,15 @@ export const generatedRoutes: GeneratedRoute[] = [
         meta: {
           title: 'manage_user-detail',
           i18nKey: 'route.manage_user-detail'
+        }
+      },
+      {
+        name: 'manage_user-dict',
+        path: '/manage/user-dict',
+        component: 'view.manage_user-dict',
+        meta: {
+          title: 'manage_user-dict',
+          i18nKey: 'route.manage_user-dict'
         }
       }
     ]

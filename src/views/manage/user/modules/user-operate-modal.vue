@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
-import type { FormRules } from 'naive-ui';
+import { computed, h, reactive, ref, watch } from 'vue';
+import type { FormRules, SelectOption } from 'naive-ui';
 import { fetchCreateUser, fetchRoleSelect, fetchUpdateUser } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
@@ -36,7 +36,28 @@ const model = reactive<Api.SystemManage.UserForm>({
   roleIds: []
 });
 
-const roleOptions = ref<Api.SystemManage.Selector<string>[]>([]);
+/** role option with the extra `roleCode` / `remark` fields used by the dropdown */
+interface RoleSelectOption extends SelectOption {
+  roleCode?: string;
+  remark?: string | null;
+}
+
+const roleOptions = ref<RoleSelectOption[]>([]);
+
+/** render the role name with its code and remark as secondary text */
+function renderRoleLabel(option: SelectOption) {
+  const { roleCode, remark } = option as RoleSelectOption;
+  const label = String(option.label ?? '');
+
+  const nodes = [h('span', label)];
+
+  if (roleCode) nodes.push(h('span', { class: 'text-12px text-gray-400' }, `[${roleCode}]`));
+  if (remark) nodes.push(h('span', { class: 'text-12px text-gray-400' }, `(${remark})`));
+
+  if (nodes.length === 1) return label;
+
+  return h('span', { class: 'inline-flex items-center gap-6px' }, nodes);
+}
 
 const title = computed(() => (props.operateType === 'add' ? $t('common.add') : $t('common.edit')));
 
@@ -56,8 +77,13 @@ watch([visible, () => props.row], async ([val]) => {
 
   const { data: roles } = await fetchRoleSelect();
 
-  // normalize option values to string, the backend serializes Long ids as string
-  roleOptions.value = (roles || []).map(role => ({ ...role, value: String(role.value) }));
+  // the select returns role rows; use `id` as value and `roleName` as label
+  roleOptions.value = (roles || []).map(role => ({
+    label: role.roleName,
+    value: String(role.id),
+    roleCode: role.roleCode,
+    remark: role.remark
+  }));
 
   restoreValidation();
 
@@ -121,7 +147,7 @@ async function handleSubmit() {
         <template #label>
           <FormLabel :label="$t('page.manage.user.role')" />
         </template>
-        <NSelect v-model:value="model.roleIds" multiple :options="roleOptions" />
+        <NSelect v-model:value="model.roleIds" multiple :options="roleOptions" :render-label="renderRoleLabel" />
       </NFormItem>
     </NForm>
     <template #footer>

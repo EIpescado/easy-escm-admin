@@ -7,7 +7,11 @@ export const BUTTON_POSITION = {
   /** Toolbar buttons, e.g. add */
   top: 'top',
   /** Row action buttons, e.g. edit / reset password */
-  row: 'row'
+  row: 'row',
+  /** Buttons of the right-hand detail panel, e.g. save */
+  leftTop: 'left-top',
+  /** Row action buttons of the right-hand detail panel */
+  leftRow: 'left-row'
 } as const;
 
 /**
@@ -39,10 +43,18 @@ export function usePageButtons() {
   /** Row action buttons */
   const rowButtons = computed(() => buttons.value[BUTTON_POSITION.row] ?? []);
 
+  /** Detail panel buttons (position `left-top`), e.g. save */
+  const leftTopButtons = computed(() => buttons.value[BUTTON_POSITION.leftTop] ?? []);
+
+  /** Detail panel row action buttons (position `left-row`) */
+  const leftRowButtons = computed(() => buttons.value[BUTTON_POSITION.leftRow] ?? []);
+
   return {
     buttons,
     toolbarButtons,
-    rowButtons
+    rowButtons,
+    leftTopButtons,
+    leftRowButtons
   };
 }
 

@@ -49,6 +49,8 @@ export function createAxiosConfig(config?: Partial<CreateAxiosDefaults>) {
       'Content-Type': 'application/json'
     },
     validateStatus: isHttpSuccess,
+    // keep the raw text so it can be parsed with `parseJson`, which preserves Long ids
+    transformResponse: [data => data],
     paramsSerializer: params => {
       return stringify(params);
     }

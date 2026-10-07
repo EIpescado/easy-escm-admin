@@ -39,7 +39,7 @@ onMounted(async () => {
 
   detail.value = user ?? null;
 
-  const roleMap = new Map((roles ?? []).map(role => [String(role.value), role.label]));
+  const roleMap = new Map((roles ?? []).map(role => [String(role.id), role.roleName]));
   roleNames.value = (user?.roleIds ?? []).map(id => roleMap.get(String(id)) ?? String(id));
 
   loading.value = false;

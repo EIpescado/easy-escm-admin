@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, watch } from 'vue';
+import { computed, h, reactive, ref, watch, type VNode } from 'vue';
+import type { TreeOption } from 'naive-ui';
 import { NTag } from 'naive-ui';
-import { useBoolean } from '@sa/hooks';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import {
   getButtonLabel,
@@ -9,9 +9,24 @@ import {
   usePageButtons,
   type PageButtonStateRules
 } from '@/hooks/business/page-buttons';
-import { fetchRoleExport, fetchRoleList, fetchToggleRoleState } from '@/service/api';
+import { useSvgIcon } from '@/hooks/common/icon';
+import {
+  fetchBindRoleMenu,
+  fetchGetMenuWholeTree,
+  fetchRoleExport,
+  fetchRoleList,
+  fetchRoleMenuIds,
+  fetchToggleRoleState
+} from '@/service/api';
 import { roleStateOptions, roleStateRecord } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
+import {
+  getMenuNodeLabel,
+  getMenuNodeType,
+  MENU_TYPE_LABEL_KEYS,
+  MENU_TYPE_TAG_TYPES,
+  type MenuNodeType
+} from '@/utils/menu';
 import { getExportItems, getTableOperateColumnWidth } from '@/utils/table';
 import { getTableSetting, setTableSetting } from '@/utils/table-settings';
 import { $t } from '@/locales';
@@ -28,7 +43,6 @@ import {
   type QuerySortItem
 } from '@/components/advanced/query-filter/types';
 import RoleOperateModal from './modules/role-operate-modal.vue';
-import MenuAuthModal from './modules/menu-auth-modal.vue';
 
 defineOptions({
   name: 'ManageRole'
@@ -83,7 +97,7 @@ const params = reactive<Api.SystemManage.PageQo>({
 });
 
 /** Buttons of the current route, provided by the backend menu tree */
-const { toolbarButtons, rowButtons } = usePageButtons();
+const { toolbarButtons, rowButtons, leftTopButtons } = usePageButtons();
 
 /**
  * Button state rules, keyed by the backend button `click` code.
@@ -94,8 +108,7 @@ const { toolbarButtons, rowButtons } = usePageButtons();
 const buttonStateRules: PageButtonStateRules<Api.SystemManage.Role> = {
   enable: ({ rows }) => !rows.some(row => row.stateEnum !== 'ON'),
   disable: ({ rows }) => !rows.some(row => row.stateEnum === 'ON'),
-  update: ({ rows }) => rows.length !== 1,
-  bindMenu: ({ rows }) => rows.length !== 1
+  update: ({ rows }) => rows.length !== 1
 };
 
 const { isDisabled: isButtonDisabled } = usePageButtonState(buttonStateRules);
@@ -145,7 +158,6 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     }
 
     tableColumns.push(
-      { type: 'selection', align: 'center', width: 48 },
       { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
       { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
       {
@@ -220,8 +232,176 @@ function isToolbarButtonDisabled(button: Api.SystemManage.ButtonNode) {
 
 const editRow = computed(() => editingData.value as unknown as Api.SystemManage.RoleForm | null);
 
-const { bool: authVisible, setTrue: openAuth } = useBoolean();
-const authRoleId = ref('');
+/** currently selected role (left list), drives the right-hand menu permission tree */
+const activeRoleId = ref('');
+const activeRoleName = computed(() => data.value.find(row => row.id === activeRoleId.value)?.roleName ?? '');
+
+/** whole menu tree (management tree), used by the right-hand permission panel */
+const menuTree = ref<Api.SystemManage.MenuNode[]>([]);
+const checkedKeys = ref<(string | number)[]>([]);
+
+const { SvgIconVNode } = useSvgIcon();
+
+/** tree option enriched with the node type and icon for rendering */
+interface MenuTreeOption extends TreeOption {
+  nodeType: MenuNodeType;
+  icon?: (() => VNode) | null;
+}
+
+function transformNodes(nodes: Api.SystemManage.MenuNode[]): MenuTreeOption[] {
+  return nodes.map(node => {
+    const icon =
+      SvgIconVNode({ icon: node.meta?.icon, fontSize: 16 }) ??
+      SvgIconVNode({ localIcon: node.meta?.localIcon, fontSize: 16 });
+
+    return {
+      key: node.id,
+      label: getMenuNodeLabel(node),
+      nodeType: getMenuNodeType(node),
+      icon,
+      children: node.children?.length ? transformNodes(node.children) : undefined
+    };
+  });
+}
+
+const treeData = computed(() => transformNodes(menuTree.value));
+
+/** render a tree node label: icon + localized (i18n key first) label */
+function renderMenuNodeLabel({ option }: { option: TreeOption }) {
+  const node = option as MenuTreeOption;
+  const children: VNode[] = [];
+
+  if (node.icon) children.push(h(node.icon));
+  children.push(h('span', String(option.label ?? '')));
+
+  return h('span', { class: 'inline-flex items-center gap-6px' }, children);
+}
+
+/** render the node type tag (root / directory / menu / button) */
+function renderMenuNodeSuffix({ option }: { option: TreeOption }) {
+  const node = option as MenuTreeOption;
+
+  return h(
+    NTag,
+    { size: 'tiny', bordered: false, type: MENU_TYPE_TAG_TYPES[node.nodeType] },
+    { default: () => $t(MENU_TYPE_LABEL_KEYS[node.nodeType]) }
+  );
+}
+
+/** id -> node / id -> parent id, built from the whole menu tree */
+const menuNodeMaps = computed(() => {
+  const nodeMap = new Map<string, Api.SystemManage.MenuNode>();
+  const parentMap = new Map<string, string>();
+
+  function walk(nodes: Api.SystemManage.MenuNode[], parentId: string) {
+    nodes.forEach(node => {
+      nodeMap.set(node.id, node);
+
+      if (parentId) parentMap.set(node.id, parentId);
+      if (node.children?.length) walk(node.children, node.id);
+    });
+  }
+
+  walk(menuTree.value, '');
+
+  return { nodeMap, parentMap };
+});
+
+/** select a role and load its bound ids (menus + buttons) as the checked keys */
+async function selectRole(row: Api.SystemManage.Role) {
+  activeRoleId.value = row.id;
+
+  const { data: ids } = await fetchRoleMenuIds(row.id);
+
+  // ignore stale responses when the selection changed while loading
+  if (activeRoleId.value !== row.id) return;
+
+  // the backend returns both menu ids and button ids; the tree checks exactly these
+  checkedKeys.value = ids || [];
+}
+
+/** highlight the selected role row and select it on click */
+function rowClassName(row: Api.SystemManage.Role) {
+  return row.id === activeRoleId.value ? 'role-row--active' : '';
+}
+
+function rowProps(row: Api.SystemManage.Role) {
+  return {
+    style: 'cursor: pointer',
+    onClick: (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+
+      // ignore clicks on the selection checkbox / row action buttons
+      if (target.closest('.n-checkbox') || target.closest('.n-button')) return;
+
+      selectRole(row);
+    }
+  };
+}
+
+/** clear the selection when the selected role is no longer in the list (e.g. after filtering / paging) */
+watch(
+  data,
+  rows => {
+    if (!rows.some(row => row.id === activeRoleId.value)) {
+      activeRoleId.value = '';
+      checkedKeys.value = [];
+    }
+  },
+  { immediate: true }
+);
+
+/** load the whole menu tree for the permission panel */
+async function getMenuTree() {
+  const { data: tree } = await fetchGetMenuWholeTree();
+
+  menuTree.value = tree || [];
+}
+
+getMenuTree();
+
+/** save the checked menus & buttons to the selected role, including the ancestors of the checked nodes */
+async function handleBindMenu() {
+  if (!activeRoleId.value) {
+    window.$message?.warning($t('page.manage.role.selectRole'));
+
+    return;
+  }
+
+  const { nodeMap, parentMap } = menuNodeMaps.value;
+  const ids = new Set(checkedKeys.value.map(String));
+
+  // include every ancestor so that a checked leaf also authorizes its parent menus
+  const queue = Array.from(ids);
+
+  while (queue.length) {
+    const parentId = parentMap.get(queue.pop() as string);
+
+    if (parentId && !ids.has(parentId)) {
+      ids.add(parentId);
+      queue.push(parentId);
+    }
+  }
+
+  // menus and buttons are submitted separately
+  const menuIds: string[] = [];
+  const buttonIds: string[] = [];
+
+  ids.forEach(id => {
+    const node = nodeMap.get(id);
+
+    if (!node) return;
+
+    if (node.beButton) buttonIds.push(id);
+    else menuIds.push(id);
+  });
+
+  const { error } = await fetchBindRoleMenu({ id: activeRoleId.value, menuIds, buttonIds });
+
+  if (!error) {
+    window.$message?.success($t('page.manage.role.menuAuthSuccess'));
+  }
+}
 
 /** Open the add form with a clean model (clear the previously edited row) */
 function handleAdd() {
@@ -238,11 +418,6 @@ function handleEdit(id: string) {
     editingData.value = row as unknown as Api.SystemManage.Role;
     openDrawer();
   }
-}
-
-function handleAuth(id: string) {
-  authRoleId.value = id;
-  openAuth();
 }
 
 function handleSetState(row: Api.SystemManage.Role, enable: boolean) {
@@ -263,7 +438,6 @@ function handleSetState(row: Api.SystemManage.Role, enable: boolean) {
 /** Row action handlers, dispatched by the backend button `click` */
 const rowActionHandlers: Record<string, (row: Api.SystemManage.Role) => void> = {
   update: row => handleEdit(row.id),
-  bindMenu: row => handleAuth(row.id),
   enable: row => handleSetState(row, true),
   disable: row => handleSetState(row, false)
 };
@@ -281,6 +455,19 @@ function handleRowAction(row: Api.SystemManage.Role, key: string) {
 /** Toolbar buttons (position `top`), text comes from the backend button `name` */
 function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
   const handlers: Record<string, () => void> = { create: handleAdd, search: handleSearch };
+
+  const handler = handlers[button.click ?? ''];
+
+  if (handler) {
+    handler();
+  } else {
+    window.$message?.info($t('common.lookForward'));
+  }
+}
+
+/** Right-hand panel buttons (position `left-top`), dispatched by the backend button `click` */
+function handleLeftTopAction(button: Api.SystemManage.ButtonNode) {
+  const handlers: Record<string, () => void> = { bindMenu: handleBindMenu, save: handleBindMenu };
 
   const handler = handlers[button.click ?? ''];
 
@@ -309,10 +496,6 @@ async function handleSubmitted() {
   closeDrawer();
   await getData();
 }
-
-async function handleAuthSubmitted() {
-  await getData();
-}
 </script>
 
 <template>
@@ -324,41 +507,70 @@ async function handleAuthSubmitted() {
       @search="handleSearch"
       @reset="handleReset"
     />
-    <NCard :bordered="false" size="small" class="min-h-0 flex-1 card-wrapper">
-      <template #header>
-        <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData">
-          <template #default>
-            <TableToolbarButtons
-              :buttons="toolbarButtons"
-              :disabled="isToolbarButtonDisabled"
-              @select="handleToolbarAction"
-            />
-          </template>
-          <template #export>
-            <TableExportButton :api="() => fetchRoleExport({ ...params, exportItems })" />
-          </template>
-        </TableHeaderOperation>
-      </template>
-      <NDataTable
-        v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
-        :data="data"
-        :loading="loading"
-        :row-key="row => row.id"
-        :pagination="tablePagination"
-        :paginate-single-page="true"
-        remote
-        flex-height
-        class="h-full"
-      />
-    </NCard>
+    <div class="min-h-0 flex flex-1 gap-16px overflow-hidden">
+      <NCard :bordered="false" size="small" class="min-w-0 min-h-0 flex-[6] card-wrapper">
+        <template #header>
+          <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData">
+            <template #default>
+              <TableToolbarButtons
+                :buttons="toolbarButtons"
+                :disabled="isToolbarButtonDisabled"
+                @select="handleToolbarAction"
+              />
+            </template>
+            <template #export>
+              <TableExportButton :api="() => fetchRoleExport({ ...params, exportItems })" />
+            </template>
+          </TableHeaderOperation>
+        </template>
+        <NDataTable
+          v-model:checked-row-keys="checkedRowKeys"
+          :columns="columns"
+          :data="data"
+          :loading="loading"
+          :row-key="row => row.id"
+          :row-class-name="rowClassName"
+          :row-props="rowProps"
+          :pagination="tablePagination"
+          :paginate-single-page="true"
+          remote
+          flex-height
+          class="h-full"
+        />
+      </NCard>
+      <NCard :bordered="false" size="small" class="menu-auth-card min-w-0 min-h-0 flex-[4] card-wrapper">
+        <template #header>
+          <div class="min-w-0 flex items-center justify-between gap-8px">
+            <span class="truncate">
+              {{
+                activeRoleId
+                  ? `${$t('page.manage.role.menuAuth')} · ${activeRoleName}`
+                  : $t('page.manage.role.menuAuth')
+              }}
+            </span>
+            <TableToolbarButtons :buttons="leftTopButtons" @select="handleLeftTopAction" />
+          </div>
+        </template>
+        <div v-if="activeRoleId" class="h-full min-h-0 overflow-auto">
+          <NTree
+            v-model:checked-keys="checkedKeys"
+            :data="treeData"
+            :render-label="renderMenuNodeLabel"
+            :render-suffix="renderMenuNodeSuffix"
+            checkable
+            expand-on-click
+            block-line
+          />
+        </div>
+        <NEmpty v-else class="mt-80px" :description="$t('page.manage.role.selectRole')" />
+      </NCard>
+    </div>
     <RoleOperateModal
       v-model:visible="drawerVisible"
       :operate-type="operateType"
       :row="editRow"
       @submitted="handleSubmitted"
     />
-    <MenuAuthModal v-model:visible="authVisible" :role-id="authRoleId" @submitted="handleAuthSubmitted" />
   </div>
 </template>
 
@@ -367,5 +579,15 @@ async function handleAuthSubmitted() {
   height: 48px !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+}
+
+/* the selected role row */
+:deep(.role-row--active .n-data-table-td) {
+  background-color: var(--n-td-color-hover, rgba(0, 0, 0, 0.04));
+}
+
+/* let the right-hand menu tree fill and scroll inside the card */
+.menu-auth-card :deep(.n-card__content) {
+  min-height: 0;
 }
 </style>

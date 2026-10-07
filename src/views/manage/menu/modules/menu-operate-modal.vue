@@ -150,7 +150,8 @@ function parseMenuProps(): Record<string, unknown> | null {
 
 const rules: FormRules = {
   name: defaultRequiredRule,
-  'meta.title': defaultRequiredRule,
+  'meta.icon': defaultRequiredRule,
+  'meta.i18nKey': defaultRequiredRule,
   sn: defaultRequiredRule,
   path: defaultRequiredRule,
   component: defaultRequiredRule
@@ -243,7 +244,8 @@ watch(visible, async val => {
 
   if (!roleOptions.value.length) {
     const { data: roles } = await fetchRoleSelect();
-    roleOptions.value = (roles ?? []).map(role => ({ ...role, value: String(role.value) }));
+    // the select returns role rows; use `id` as value and `roleName` as label
+    roleOptions.value = (roles ?? []).map(role => ({ label: role.roleName, value: String(role.id) }));
   }
 });
 
@@ -344,13 +346,13 @@ async function handleSubmit() {
               :disabled="!model.beButton && operateType === 'edit'"
             />
           </NFormItem>
-          <NFormItem>
+          <NFormItem :path="model.beButton ? 'icon' : 'meta.icon'">
             <template #label>
               <FormLabel :label="$t('page.manage.menu.icon')" :tip="$t('page.manage.menu.tips.icon')" />
             </template>
             <NInput v-model:value="iconValue" :placeholder="$t('page.manage.menu.iconPlaceholder')" />
           </NFormItem>
-          <NFormItem>
+          <NFormItem :path="model.beButton ? 'i18nKey' : 'meta.i18nKey'">
             <template #label>
               <FormLabel :label="$t('page.manage.menu.i18nKey')" :tip="$t('page.manage.menu.tips.i18nKey')" />
             </template>
@@ -421,15 +423,6 @@ async function handleSubmit() {
                 <FormLabel :label="$t('page.manage.menu.localIcon')" :tip="$t('page.manage.menu.tips.localIcon')" />
               </template>
               <NInput v-model:value="model.meta.localIcon" :placeholder="$t('page.manage.menu.localIcon')" />
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel
-                  :label="$t('page.manage.menu.iconFontSize')"
-                  :tip="$t('page.manage.menu.tips.iconFontSize')"
-                />
-              </template>
-              <NInputNumber v-model:value="model.meta.iconFontSize" :min="0" class="w-full" />
             </NFormItem>
             <NFormItem>
               <template #label>

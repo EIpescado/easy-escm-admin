@@ -55,7 +55,6 @@ function createCommonRequest<
       const responseType: ResponseType = (response.config?.responseType as ResponseType) || 'json';
 
       await transformResponse(response);
-      console.log('transformResponse', response);
 
       if (responseType !== 'json' || opts.isBackendSuccess(response)) {
         return Promise.resolve(response);

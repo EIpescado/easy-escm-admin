@@ -252,6 +252,8 @@ const local: App.I18n.Schema = {
     manage_user: '用户管理',
     manage_role: '角色管理',
     manage_menu: '菜单管理',
+    manage_dict: '字典管理',
+    'manage_user-dict': '用户字典',
     'manage_user-detail': '用户详情'
   },
   page: {
@@ -329,6 +331,7 @@ const local: App.I18n.Schema = {
         stateLabel: '状态',
         menuAuth: '菜单授权',
         menuAuthSuccess: '授权成功',
+        selectRole: '请在左侧选择角色',
         enableConfirm: '确认启用角色「{name}」？',
         disableConfirm: '确认禁用角色「{name}」？',
         state: {
@@ -407,6 +410,31 @@ const local: App.I18n.Schema = {
           click: '点击按钮时前端分发的动作名，如 create / edit / delete',
           position: '按钮位置：top=工具栏，row=行操作，也可自定义'
         }
+      },
+      dict: {
+        code: '字典编码',
+        name: '字典名称',
+        stateLabel: '状态',
+        remark: '备注',
+        whetherAuth: '需要鉴权',
+        enabled: '启用',
+        disabled: '禁用',
+        enableConfirm: '确认启用字典「{name}」？',
+        disableConfirm: '确认禁用字典「{name}」？',
+        entry: {
+          title: '字典明细',
+          code: '明细编码',
+          val: '值',
+          val2: '值2',
+          val3: '值3',
+          val4: '值4',
+          sn: '排序号',
+          remark: '备注'
+        },
+        allDict: '全部字典',
+        ownedDict: '拥有字典',
+        selectUser: '请在左侧选择用户',
+        selectDict: '请在左侧选择字典'
       }
     },
     home: {

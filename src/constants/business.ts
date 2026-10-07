@@ -16,3 +16,11 @@ export const roleStateRecord: Record<string, App.I18n.I18nKey> = {
 };
 
 export const roleStateOptions = transformRecordToOption(roleStateRecord);
+
+/** common enable state record for `AbleStateEnum` nodes (ON / OFF) */
+export const enableStateRecord: Record<string, App.I18n.I18nKey> = {
+  ON: 'page.manage.dict.enabled',
+  OFF: 'page.manage.dict.disabled'
+};
+
+export const enableStateOptions = transformRecordToOption(enableStateRecord);

@@ -577,6 +577,7 @@ declare namespace App {
             stateLabel: string;
             menuAuth: string;
             menuAuthSuccess: string;
+            selectRole: string;
             enableConfirm: string;
             disableConfirm: string;
             state: {
@@ -655,6 +656,31 @@ declare namespace App {
               click: string;
               position: string;
             };
+          };
+          dict: {
+            code: string;
+            name: string;
+            stateLabel: string;
+            remark: string;
+            whetherAuth: string;
+            enabled: string;
+            disabled: string;
+            enableConfirm: string;
+            disableConfirm: string;
+            entry: {
+              title: string;
+              code: string;
+              val: string;
+              val2: string;
+              val3: string;
+              val4: string;
+              sn: string;
+              remark: string;
+            };
+            allDict: string;
+            ownedDict: string;
+            selectUser: string;
+            selectDict: string;
           };
         };
         home: {
