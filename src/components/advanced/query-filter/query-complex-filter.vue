@@ -4,11 +4,13 @@ import { useElementSize, useResizeObserver } from '@vueuse/core';
 import { $t } from '@/locales';
 import QueryValueEditor from './query-value-editor.vue';
 import {
+  buildFieldSlots,
   createCondition,
   getFieldOperators,
   normalizeValues,
   QUERY_OPERATOR_ORDER,
   type QueryField,
+  type QueryFieldSlot,
   type QueryFilterCondition,
   type QueryOperator
 } from './types';
@@ -58,22 +60,35 @@ const columns = computed(() => {
 
 const collapsed = ref(true);
 
+/**
+ * The field slots actually rendered by the filter
+ *
+ * Every `fast` field is merged into a single keyword condition (see `buildFieldSlots`), which is
+ * rendered first as it is the quickest way to narrow the list down.
+ */
+const slots = computed(() => buildFieldSlots(props.fields));
+
 /** Field count shown in the collapsed rows */
 const capacity = computed(() => columns.value * props.collapsedRows);
 
 /** Whether some conditions are hidden behind the collapsed drawer */
-const hasOverflow = computed(() => props.fields.length > capacity.value);
+const hasOverflow = computed(() => slots.value.length > capacity.value);
 
 /** Whether the action cell can sit inline, right after the last condition */
-const actionInline = computed(() => props.fields.length + 1 <= capacity.value);
+const actionInline = computed(() => slots.value.length + 1 <= capacity.value);
 
 const conditionMap = computed(() => new Map(model.value.map(condition => [condition.prop, condition])));
 
-/** Pair every field with its condition */
+/** Create the condition of a slot, carrying the props merged into the keyword one */
+function createSlotCondition(slot: QueryFieldSlot) {
+  return createCondition(slot.field, { type: getEffectiveType(slot.field), fastProps: slot.fastProps });
+}
+
+/** Pair every slot with its condition */
 const rows = computed(() =>
-  props.fields.map(field => ({
-    field,
-    condition: conditionMap.value.get(field.prop) ?? createCondition(field, { type: getEffectiveType(field) })
+  slots.value.map(slot => ({
+    slot,
+    condition: conditionMap.value.get(slot.field.prop) ?? createSlotCondition(slot)
   }))
 );
 
@@ -131,19 +146,24 @@ watch([columns, () => props.fields], updateHeights, { flush: 'post' });
 function syncConditions() {
   const existing = new Map(model.value.map(condition => [condition.prop, condition]));
 
-  const next = props.fields.map(field => {
-    const condition = existing.get(field.prop);
+  const next = slots.value.map(slot => {
+    const condition = existing.get(slot.field.prop);
 
     if (!condition) {
-      return createCondition(field, { type: getEffectiveType(field) });
+      return createSlotCondition(slot);
+    }
+
+    // the merged prop list is derived from `fields`, so keep it in sync
+    if ((condition.fastProps ?? []).join() !== (slot.fastProps ?? []).join()) {
+      return { ...condition, fastProps: slot.fastProps };
     }
 
     // if the current operator is no longer allowed (field `types` / global `operators` changed), reset it
-    if (getAllowedOperators(field).includes(condition.type)) {
+    if (getAllowedOperators(slot.field).includes(condition.type)) {
       return condition;
     }
 
-    const type = getEffectiveType(field);
+    const type = getEffectiveType(slot.field);
 
     return { ...condition, type, values: normalizeValues(type, condition.values) };
   });
@@ -186,14 +206,15 @@ function getOperatorOptions(field: QueryField) {
   }));
 }
 
-function patch(field: QueryField, changes: Partial<QueryFilterCondition>) {
-  const base = conditionMap.value.get(field.prop) ?? createCondition(field);
+function patch(slot: QueryFieldSlot, changes: Partial<QueryFilterCondition>) {
+  const { prop } = slot.field;
+  const base = conditionMap.value.get(prop) ?? createSlotCondition(slot);
 
-  model.value = model.value.map(condition => (condition.prop === field.prop ? { ...base, ...changes } : condition));
+  model.value = model.value.map(condition => (condition.prop === prop ? { ...base, ...changes } : condition));
 }
 
-function handleTypeChange(field: QueryField, type: QueryOperator) {
-  patch(field, { type, values: normalizeValues(type, conditionMap.value.get(field.prop)?.values ?? []) });
+function handleTypeChange(slot: QueryFieldSlot, type: QueryOperator) {
+  patch(slot, { type, values: normalizeValues(type, conditionMap.value.get(slot.field.prop)?.values ?? []) });
 }
 
 /** Throttle window (ms) to prevent the search from being triggered repeatedly by rapid clicks / Enter */
@@ -214,7 +235,7 @@ function handleSearch() {
 
 <template>
   <div ref="containerRef" class="flex flex-col gap-12px">
-    <div v-if="!fields.length" class="text-12px text-gray-400">{{ $t('queryFilter.empty') }}</div>
+    <div v-if="!slots.length" class="text-12px text-gray-400">{{ $t('queryFilter.empty') }}</div>
 
     <template v-else>
       <div ref="gridRef" :class="{ 'query-drawer': hasOverflow }" :style="hasOverflow ? drawerStyle : undefined">
@@ -223,40 +244,46 @@ function handleSearch() {
             <div
               class="query-condition min-h-34px flex items-center overflow-hidden border border-#e5e7eb rounded-6px transition-colors hover:border-#d9dde3 focus-within:border-primary dark:border-#33343a dark:hover:border-#3d3d42"
             >
+              <!--
+                The prefix is sized by its content instead of a fixed percentage, so a short label
+                such as the merged keyword one is never truncated in a narrow column. `max-w-[68%]`
+                still bounds it, and the label is the item that yields the space when the column is
+                too narrow for the content, so it only truncates as a last resort.
+              -->
               <div
-                class="query-prefix w-[40%] flex shrink-0 items-center gap-8px self-stretch bg-#f2f3f5 pl-10px dark:bg-#2a2a2e"
+                class="query-prefix max-w-[68%] flex shrink items-center gap-8px self-stretch bg-#f2f3f5 pl-10px dark:bg-#2a2a2e"
               >
                 <span
-                  class="min-w-0 flex-1 truncate text-13px font-600 text-gray-500 dark:text-gray-400"
-                  :title="row.field.label"
+                  class="min-w-0 shrink truncate text-13px font-600 text-gray-500 dark:text-gray-400"
+                  :title="row.slot.field.label"
                 >
-                  {{ row.field.label }}
+                  {{ row.slot.field.label }}
                 </span>
                 <NSelect
-                  v-if="getOperatorOptions(row.field).length > 1"
+                  v-if="getOperatorOptions(row.slot.field).length > 1"
                   class="w-68px shrink-0"
                   size="small"
                   :bordered="false"
                   :consistent-menu-width="false"
                   :value="row.condition.type"
-                  :options="getOperatorOptions(row.field)"
-                  @update:value="value => handleTypeChange(row.field, value)"
+                  :options="getOperatorOptions(row.slot.field)"
+                  @update:value="value => handleTypeChange(row.slot, value)"
                 />
                 <span
                   v-else
                   class="w-68px shrink-0 truncate text-13px text-gray-500 dark:text-gray-400"
-                  :title="getOperatorOptions(row.field)[0]?.label"
+                  :title="getOperatorOptions(row.slot.field)[0]?.label"
                 >
-                  {{ getOperatorOptions(row.field)[0]?.label }}
+                  {{ getOperatorOptions(row.slot.field)[0]?.label }}
                 </span>
               </div>
               <div class="query-value min-w-0 flex flex-1 items-center">
                 <QueryValueEditor
-                  :field="row.field"
+                  :field="row.slot.field"
                   :type="row.condition.type"
                   :bordered="false"
                   :model-value="row.condition.values"
-                  @update:model-value="values => patch(row.field, { values })"
+                  @update:model-value="values => patch(row.slot, { values })"
                   @submit="handleSearch"
                 />
               </div>

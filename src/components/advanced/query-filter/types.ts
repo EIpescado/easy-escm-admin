@@ -1,4 +1,5 @@
 import type { SelectOption } from 'naive-ui';
+import { $t } from '@/locales';
 
 /**
  * Shared types & helpers for the advanced query filter.
@@ -60,6 +61,16 @@ export interface QueryField {
   options?: SelectOption[];
   /** Placeholder of the value editor */
   placeholder?: string;
+  /**
+   * Whether the field is searched by the mixed `like` keyword query
+   *
+   * Several items are AND-ed by the backend, so the fields that should be OR-ed (e.g.
+   * `a.code like '%' or a.name like '%'`) are marked with `fast: true`. They are merged into a
+   * single keyword condition by {@link buildFieldSlots} (label `queryFilter.keyword`, locked to the
+   * `like` operator, merged labels in the placeholder) and expanded back into one `fast` item per
+   * prop by {@link toQueryItems}, so the backend OR-s them instead of AND-ing them.
+   */
+  fast?: boolean;
 }
 
 /** One condition edited by the query filter (backend query item + a local id) */
@@ -68,6 +79,13 @@ export interface QueryFilterCondition {
   prop: string;
   type: QueryOperator;
   values: string[];
+  /**
+   * The props of the `fast` fields merged into this condition, only set for the keyword condition
+   *
+   * {@link toQueryItems} expands it into one `fast: true` item per prop, so a single keyword value
+   * searches every merged field.
+   */
+  fastProps?: string[];
 }
 
 /** One sort rule edited by the query filter (backend order item + a local id) */
@@ -99,6 +117,51 @@ export function getFieldOperators(field?: QueryField | null): QueryOperator[] {
     default:
       return TEXT_OPERATORS;
   }
+}
+
+/** Separator used by the merged keyword placeholder */
+export const FAST_FIELD_SEPARATOR = ' / ';
+
+/**
+ * One condition rendered by the filter, with the props merged into it
+ */
+export interface QueryFieldSlot {
+  /** The rendered field, the keyword one is a virtual field built by {@link buildFieldSlots} */
+  field: QueryField;
+  /** The props of the `fast` fields merged into this condition, only set for the keyword one */
+  fastProps?: string[];
+}
+
+/**
+ * Build the field slots rendered by the filter
+ *
+ * Every `fast` field is merged into a single virtual keyword field, rendered first as it is the
+ * quickest way to narrow the list down. Its condition is locked to `like`, labelled as
+ * `queryFilter.keyword`, and its placeholder lists the merged labels so the user knows which fields
+ * are actually searched.
+ */
+export function buildFieldSlots(fields: QueryField[]): QueryFieldSlot[] {
+  const fastFields = fields.filter(field => field.fast);
+
+  if (!fastFields.length) return fields.map(field => ({ field }));
+
+  const [first, ...rest] = fastFields;
+
+  return [
+    {
+      field: {
+        ...first,
+        // a `like` value is a single string, so the text editor is used no matter the value types
+        valueType: 'text',
+        label: $t('queryFilter.keyword'),
+        placeholder: [first, ...rest].map(field => field.label).join(FAST_FIELD_SEPARATOR),
+        types: ['like'],
+        defaultType: 'like'
+      },
+      fastProps: fastFields.map(field => field.prop)
+    },
+    ...fields.filter(field => !field.fast).map(field => ({ field }))
+  ];
 }
 
 /** Get the default operator of a field (used by quick query when the user keeps the default) */
@@ -165,13 +228,21 @@ export function isConditionFilled(condition: QueryFilterCondition) {
  * Convert the internal conditions to backend query items
  *
  * Empty conditions are dropped, so the caller does not need to filter them.
+ *
+ * A merged keyword condition is expanded into one item per merged field, and every one of them is
+ * flagged with `fast: true`, so the backend OR-s them (`a.code like ? or a.name like ?`) instead of
+ * AND-ing them like any other pair of items.
  */
 export function toQueryItems(conditions: QueryFilterCondition[]): Api.SystemManage.QueryItem[] {
-  return conditions.filter(isConditionFilled).map(condition => ({
-    prop: condition.prop,
-    type: condition.type,
-    values: normalizeValues(condition.type, condition.values).map(String)
-  }));
+  return conditions.filter(isConditionFilled).flatMap(condition => {
+    const values = normalizeValues(condition.type, condition.values).map(String);
+
+    if (condition.fastProps?.length) {
+      return condition.fastProps.map(prop => ({ prop, type: condition.type, values, fast: true }));
+    }
+
+    return { prop: condition.prop, type: condition.type, values };
+  });
 }
 
 let sortSeed = 0;

@@ -62,19 +62,17 @@ loadAllDicts();
 /** ---------------- dict main list ---------------- */
 
 const dictSearchFields = computed<QueryField[]>(() => [
+  // the backend searches the code and the name with a mixed `like`, so they are merged into one
+  // keyword condition (label 关键字, placeholder 字典编码 / 字典名称, fixed operator 包含)
   {
     prop: 'code',
     label: $t('page.manage.dict.code'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like', 'eq', 'ne']
+    fast: true
   },
   {
     prop: 'name',
     label: $t('page.manage.dict.name'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like', 'eq', 'ne']
+    fast: true
   },
   {
     prop: 'state',
@@ -230,20 +228,14 @@ function dictRowProps(row: Api.SystemManage.Dict) {
 }
 
 const entrySearchFields = computed<QueryField[]>(() => [
-  {
-    prop: 'code',
-    label: $t('page.manage.dict.entry.code'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like', 'eq', 'ne']
-  },
-  {
-    prop: 'val',
-    label: $t('page.manage.dict.entry.val'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like', 'eq', 'ne']
-  }
+  // the backend searches these five fields with a mixed `like`, so they are merged into one keyword
+  // condition (label 关键字, placeholder 明细编码 / 值 / 值2 / 值3 / 值4, fixed operator 包含)
+  // `val2` ~ `val4` are only searched by the keyword, they are never rendered on their own
+  { prop: 'code', label: $t('page.manage.dict.entry.code'), fast: true },
+  { prop: 'val', label: $t('page.manage.dict.entry.val'), fast: true },
+  { prop: 'val2', label: $t('page.manage.dict.entry.val2'), fast: true },
+  { prop: 'val3', label: $t('page.manage.dict.entry.val3'), fast: true },
+  { prop: 'val4', label: $t('page.manage.dict.entry.val4'), fast: true }
 ]);
 
 const entryConditions = ref<QueryFilterCondition[]>([]);
@@ -286,6 +278,8 @@ const {
   mobilePagination: entryPagination
 } = useNaivePaginatedTable({
   tableKey: 'manage_dict_entry',
+  // the entries list is linked to the selected dictionary, so do not fetch on mount
+  immediate: false,
   api: () => fetchDictEntrySearch(entryParams),
   transform: response => {
     const { data: resData, error } = response;

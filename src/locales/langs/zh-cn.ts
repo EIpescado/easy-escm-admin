@@ -525,6 +525,7 @@ const local: App.I18n.Schema = {
   },
   queryFilter: {
     add: '添加条件',
+    keyword: '关键字',
     showMore: '展开',
     showLess: '折叠',
     empty: '暂无查询条件，点击「添加条件」开始',

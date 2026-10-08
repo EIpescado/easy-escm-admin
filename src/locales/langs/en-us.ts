@@ -529,6 +529,7 @@ const local: App.I18n.Schema = {
   },
   queryFilter: {
     add: 'Add condition',
+    keyword: 'Keyword',
     showMore: 'Expand',
     showLess: 'Collapse',
     empty: 'No conditions yet, click "Add condition" to start',

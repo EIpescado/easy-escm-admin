@@ -744,6 +744,7 @@ declare namespace App {
       };
       queryFilter: {
         add: string;
+        keyword: string;
         showMore: string;
         showLess: string;
         empty: string;

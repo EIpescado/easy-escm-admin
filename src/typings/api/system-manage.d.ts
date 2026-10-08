@@ -27,6 +27,18 @@ declare namespace Api {
       values: string[];
       type?: string;
       alias?: string;
+      /**
+       * Whether the item belongs to the mixed `like` keyword query
+       *
+       * Items are AND-ed by default; the ones flagged with `fast` are OR-ed instead, e.g. the
+       * keyword `basic` over the `code` and `name` fields is sent as
+       * `[{ prop: 'code', values: ['basic'], fast: true }, { prop: 'name', values: ['basic'], fast: true }]`
+       * and the backend builds `(a.code like '%basic%' or a.name like '%basic%')`.
+       *
+       * Built from the `fast` fields of the advanced query filter, which are merged into a single
+       * keyword condition on the frontend and expanded back into one item per field here.
+       */
+      fast?: boolean;
     }
 
     /** dynamic sort item, aligned with backend BaseQo.OrderByItem */
