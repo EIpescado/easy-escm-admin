@@ -27,7 +27,7 @@ import {
   MENU_TYPE_TAG_TYPES,
   type MenuNodeType
 } from '@/utils/menu';
-import { getExportItems, getTableOperateColumnWidth } from '@/utils/table';
+import { getExportItems, getSortFields, getTableOperateColumnWidth } from '@/utils/table';
 import { getTableSetting, setTableSetting } from '@/utils/table-settings';
 import { $t } from '@/locales';
 import TableRowOperation from '@/components/advanced/table-row-operation.vue';
@@ -199,6 +199,9 @@ watch(
   { immediate: true }
 );
 
+/** Sortable fields follow the current column settings (checked columns, in table order) */
+const sortFields = computed(() => getSortFields(columnChecks.value));
+
 /** Pagination with the sort button rendered on its right (via the pagination `suffix`) */
 const tablePagination = computed(() => ({
   ...mobilePagination.value,
@@ -208,7 +211,7 @@ const tablePagination = computed(() => ({
       'onUpdate:modelValue': (value: QuerySortItem[]) => {
         searchSort.value = value;
       },
-      fields: searchFields.value,
+      fields: sortFields.value,
       onConfirm: handleSearch
     })
 }));
@@ -235,6 +238,9 @@ const editRow = computed(() => editingData.value as unknown as Api.SystemManage.
 /** currently selected role (left list), drives the right-hand menu permission tree */
 const activeRoleId = ref('');
 const activeRoleName = computed(() => data.value.find(row => row.id === activeRoleId.value)?.roleName ?? '');
+
+/** whether the selected role's bound menus are being loaded into the tree */
+const menuLoading = ref(false);
 
 /** whole menu tree (management tree), used by the right-hand permission panel */
 const menuTree = ref<Api.SystemManage.MenuNode[]>([]);
@@ -307,17 +313,29 @@ const menuNodeMaps = computed(() => {
   return { nodeMap, parentMap };
 });
 
-/** select a role and load its bound ids (menus + buttons) as the checked keys */
+/**
+ * Select a role and load its bound ids (menus + buttons) as the checked keys
+ *
+ * While a load is in flight the tree spins and blocks interaction, and further selections are
+ * ignored, so clicking several rows in a row cannot fire a request per row.
+ */
 async function selectRole(row: Api.SystemManage.Role) {
+  if (menuLoading.value) return;
+
   activeRoleId.value = row.id;
+  menuLoading.value = true;
 
-  const { data: ids } = await fetchRoleMenuIds(row.id);
+  try {
+    const { data: ids } = await fetchRoleMenuIds(row.id);
 
-  // ignore stale responses when the selection changed while loading
-  if (activeRoleId.value !== row.id) return;
+    // ignore stale responses when the selection changed while loading
+    if (activeRoleId.value !== row.id) return;
 
-  // the backend returns both menu ids and button ids; the tree checks exactly these
-  checkedKeys.value = ids || [];
+    // the backend returns both menu ids and button ids; the tree checks exactly these
+    checkedKeys.value = ids || [];
+  } finally {
+    menuLoading.value = false;
+  }
 }
 
 /** highlight the selected role row and select it on click */
@@ -478,6 +496,14 @@ function handleLeftTopAction(button: Api.SystemManage.ButtonNode) {
   }
 }
 
+/**
+ * Every right-hand button writes the checked menus, so they all wait for the current load to finish
+ * (otherwise they could save the previously selected role's menus by mistake)
+ */
+function isMenuAuthButtonDisabled() {
+  return menuLoading.value;
+}
+
 function handleSearch() {
   params.items = toQueryItems(searchConditions.value);
   params.orders = toOrderItems(searchSort.value);
@@ -548,20 +574,26 @@ async function handleSubmitted() {
                   : $t('page.manage.role.menuAuth')
               }}
             </span>
-            <TableToolbarButtons :buttons="leftTopButtons" @select="handleLeftTopAction" />
+            <TableToolbarButtons
+              :buttons="leftTopButtons"
+              :disabled="isMenuAuthButtonDisabled"
+              @select="handleLeftTopAction"
+            />
           </div>
         </template>
-        <div v-if="activeRoleId" class="h-full min-h-0 overflow-auto">
-          <NTree
-            v-model:checked-keys="checkedKeys"
-            :data="treeData"
-            :render-label="renderMenuNodeLabel"
-            :render-suffix="renderMenuNodeSuffix"
-            checkable
-            expand-on-click
-            block-line
-          />
-        </div>
+        <NSpin v-if="activeRoleId" :show="menuLoading" class="h-full min-h-0" content-class="h-full min-h-0">
+          <div class="h-full min-h-0 overflow-auto">
+            <NTree
+              v-model:checked-keys="checkedKeys"
+              :data="treeData"
+              :render-label="renderMenuNodeLabel"
+              :render-suffix="renderMenuNodeSuffix"
+              checkable
+              expand-on-click
+              block-line
+            />
+          </div>
+        </NSpin>
         <NEmpty v-else class="mt-80px" :description="$t('page.manage.role.selectRole')" />
       </NCard>
     </div>
@@ -586,8 +618,8 @@ async function handleSubmitted() {
   background-color: var(--n-td-color-hover, rgba(0, 0, 0, 0.04));
 }
 
-/* let the right-hand menu tree fill and scroll inside the card */
-.menu-auth-card :deep(.n-card__content) {
+/* let the right-hand menu tree fill and scroll inside the card; naive-ui renders `.n-card-content` */
+.menu-auth-card :deep(.n-card-content) {
   min-height: 0;
 }
 </style>

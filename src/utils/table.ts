@@ -1,3 +1,5 @@
+import type { QueryField } from '@/components/advanced/query-filter/types';
+
 /**
  * Calculate the width of a table operation column from its action labels
  *
@@ -19,8 +21,20 @@ export function getTableOperateColumnWidth(labels: string[], max = 2, extra = 0)
   return Math.ceil(contentWidth + gapWidth + 24 + extra);
 }
 
-/** Column keys that are not backend entity fields and must not be exported */
-const NON_EXPORTABLE_KEYS = ['operate', '__selection__', '__expand__'];
+/** Column keys that are not backend entity fields, e.g. the operation / selection columns */
+const NON_DATA_KEYS = ['operate', '__selection__', '__expand__'];
+
+/** Keep only the data columns (dropping the operation / selection ones), in table order */
+function getDataColumns(checks: NaiveUI.TableColumnCheck[], exclude: string[] = []) {
+  const excluded = new Set([...NON_DATA_KEYS, ...exclude]);
+
+  return checks.filter(check => !excluded.has(check.key));
+}
+
+/** Display label of a column check, falling back to its key */
+function getColumnLabel(check: NaiveUI.TableColumnCheck) {
+  return typeof check.title === 'string' ? check.title : check.key;
+}
 
 /**
  * Build the backend export items from the table column checks, keeping only the checked data columns
@@ -34,12 +48,23 @@ export function getExportItems(
   checks: NaiveUI.TableColumnCheck[],
   exclude: string[] = []
 ): Api.SystemManage.ExportItem[] {
-  const excluded = new Set([...NON_EXPORTABLE_KEYS, ...exclude]);
-
-  return checks
-    .filter(check => check.checked && check.visible && !excluded.has(check.key))
+  return getDataColumns(checks, exclude)
+    .filter(check => check.checked && check.visible)
     .map(check => ({
       prop: check.key,
-      label: typeof check.title === 'string' ? check.title : check.key
+      label: getColumnLabel(check)
     }));
+}
+
+/**
+ * Build the sortable fields from the table column checks
+ *
+ * Every data column is sortable, including the ones hidden in the column settings: hiding a column
+ * only hides it from the table, it must not prevent sorting by it.
+ */
+export function getSortFields(checks: NaiveUI.TableColumnCheck[]): QueryField[] {
+  return getDataColumns(checks).map(check => ({
+    prop: check.key,
+    label: getColumnLabel(check)
+  }));
 }

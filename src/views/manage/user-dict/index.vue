@@ -292,7 +292,7 @@ function handleReset() {
   background-color: var(--n-td-color-hover, rgba(0, 0, 0, 0.04));
 }
 
-.card-wrapper :deep(.n-card__content) {
+.card-wrapper :deep(.n-card-content) {
   min-height: 0;
 }
 </style>

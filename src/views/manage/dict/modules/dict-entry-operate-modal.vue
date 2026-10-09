@@ -14,6 +14,13 @@ interface Props {
   row: Api.SystemManage.DictEntryForm | null;
   /** selectable dictionaries, used by the owning-dictionary field */
   dictOptions: { label: string; value: string }[];
+  /**
+   * Dictionary selected in the left list
+   *
+   * When adding an entry the owning-dictionary field is fixed to it, so the new entry always belongs
+   * to the dictionary currently being browsed.
+   */
+  activeDictId?: string;
 }
 
 const props = defineProps<Props>();
@@ -37,12 +44,17 @@ const model = reactive<Api.SystemManage.DictEntryForm>({
   val2: '',
   val3: '',
   val4: '',
+  // not editable in this form: it is only carried here so an update keeps the current backend value,
+  // the state is changed from the dedicated enable / disable action instead
   state: 'ON',
   remark: '',
   sn: 1
 });
 
 const title = computed(() => (props.operateType === 'add' ? $t('common.add') : $t('common.edit')));
+
+/** the owning dictionary cannot be changed when adding, it follows the selected dictionary */
+const isDictLocked = computed(() => props.operateType === 'add');
 
 const rules: FormRules = {
   code: defaultRequiredRule,
@@ -57,7 +69,7 @@ watch(visible, val => {
   Object.assign(model, {
     id: props.row?.id,
     code: props.row?.code ?? '',
-    pid: props.row?.pid ?? '',
+    pid: isDictLocked.value ? (props.activeDictId ?? '') : (props.row?.pid ?? ''),
     val: props.row?.val ?? '',
     val2: props.row?.val2 ?? '',
     val3: props.row?.val3 ?? '',
@@ -98,6 +110,7 @@ async function handleSubmit() {
           <NSelect
             v-model:value="model.pid"
             filterable
+            :disabled="isDictLocked"
             :options="dictOptions"
             :placeholder="$t('page.manage.dict.name')"
           />
@@ -113,15 +126,6 @@ async function handleSubmit() {
             <FormLabel :label="$t('page.manage.dict.entry.sn')" />
           </template>
           <NInputNumber v-model:value="model.sn" :min="0" class="w-full" />
-        </NFormItem>
-        <NFormItem path="state">
-          <template #label>
-            <FormLabel :label="$t('page.manage.dict.stateLabel')" />
-          </template>
-          <NRadioGroup v-model:value="model.state">
-            <NRadio value="ON">{{ $t('page.manage.dict.enabled') }}</NRadio>
-            <NRadio value="OFF">{{ $t('page.manage.dict.disabled') }}</NRadio>
-          </NRadioGroup>
         </NFormItem>
         <NFormItem path="val">
           <template #label>

@@ -13,7 +13,7 @@ import {
 import { fetchToggleUserState, fetchUserDetail, fetchUserExport, fetchUserList } from '@/service/api';
 import { userStateOptions, userStateRecord } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
-import { getExportItems, getTableOperateColumnWidth } from '@/utils/table';
+import { getExportItems, getSortFields, getTableOperateColumnWidth } from '@/utils/table';
 import { getTableSetting, setTableSetting } from '@/utils/table-settings';
 import { $t } from '@/locales';
 import TableRowOperation from '@/components/advanced/table-row-operation.vue';
@@ -220,6 +220,9 @@ watch(
   { immediate: true }
 );
 
+/** Sortable fields follow the current column settings (checked columns, in table order) */
+const sortFields = computed(() => getSortFields(columnChecks.value));
+
 /** Pagination with the sort button rendered on its right (via the pagination `suffix`) */
 const tablePagination = computed(() => ({
   ...mobilePagination.value,
@@ -229,7 +232,7 @@ const tablePagination = computed(() => ({
       'onUpdate:modelValue': (value: QuerySortItem[]) => {
         searchSort.value = value;
       },
-      fields: searchFields.value,
+      fields: sortFields.value,
       onConfirm: handleSearch
     })
 }));

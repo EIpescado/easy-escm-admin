@@ -44,7 +44,7 @@ function renderEllipsis(text?: string | number | null) {
 /** Buttons of the current route, provided by the backend menu tree */
 const { toolbarButtons, rowButtons, leftTopButtons, leftRowButtons } = usePageButtons();
 
-/** ---------------- all dictionaries (for the entry filter & form) ---------------- */
+/** ---------------- all dictionaries (for the entry form select) ---------------- */
 
 const allDicts = ref<Api.SystemManage.Dict[]>([]);
 
@@ -52,12 +52,16 @@ const dictOptions = computed(() =>
   allDicts.value.map(dict => ({ label: `${dict.name}（${dict.code}）`, value: dict.id }))
 );
 
+/**
+ * Load the dictionaries offered by the entry form select
+ *
+ * It is only needed while the entry form is open, so it is loaded when that form opens instead of
+ * after every dictionary submit, which would query the dictionary list a second time.
+ */
 async function loadAllDicts() {
   const { data: res } = await fetchDictSearch({ page: 1, size: 999, items: [], orders: [] });
   allDicts.value = res?.rows ?? [];
 }
-
-loadAllDicts();
 
 /** ---------------- dict main list ---------------- */
 
@@ -432,9 +436,10 @@ function handleDictToolbarAction(button: Api.SystemManage.ButtonNode) {
   else window.$message?.info($t('common.lookForward'));
 }
 
-function handleEntryAdd() {
+async function handleEntryAdd() {
   entryOperateType.value = 'add';
   editingEntry.value = null;
+  await loadAllDicts();
   openEntryModal();
 }
 
@@ -445,6 +450,7 @@ async function handleEntryEdit(row: Api.SystemManage.DictEntry) {
 
   entryOperateType.value = 'edit';
   editingEntry.value = { ...data, state: row.stateEnum, sn: row.sn };
+  await loadAllDicts();
   openEntryModal();
 }
 
@@ -483,6 +489,14 @@ function handleEntryToolbarAction(button: Api.SystemManage.ButtonNode) {
 
   if (handler) handler();
   else window.$message?.info($t('common.lookForward'));
+}
+
+/** Entry toolbar actions that create an entry, they need a selected dictionary */
+const ENTRY_CREATE_ACTIONS = ['create', 'add'];
+
+/** Creating an entry requires a selected dictionary, the other actions do not */
+function isEntryToolbarButtonDisabled(button: Api.SystemManage.ButtonNode) {
+  return !activeDictId.value && ENTRY_CREATE_ACTIONS.includes(button.click ?? '');
 }
 
 function handleDictSearch() {
@@ -538,7 +552,8 @@ function handleEntryReset() {
 }
 async function handleDictSubmitted() {
   closeDictModal();
-  await Promise.all([getDictData(), loadAllDicts()]);
+  // only the list has to be refreshed here: the entry form select reloads when that form opens
+  await getDictData();
 }
 
 async function handleEntrySubmitted() {
@@ -597,7 +612,11 @@ async function handleEntrySubmitted() {
                   : $t('page.manage.dict.entry.title')
               }}
             </span>
-            <TableToolbarButtons :buttons="leftTopButtons" @select="handleEntryToolbarAction" />
+            <TableToolbarButtons
+              :buttons="leftTopButtons"
+              :disabled="isEntryToolbarButtonDisabled"
+              @select="handleEntryToolbarAction"
+            />
           </div>
         </template>
         <NDataTable
@@ -624,6 +643,7 @@ async function handleEntrySubmitted() {
       :operate-type="entryOperateType"
       :row="editingEntry"
       :dict-options="dictOptions"
+      :active-dict-id="activeDictId"
       @submitted="handleEntrySubmitted"
     />
   </div>
