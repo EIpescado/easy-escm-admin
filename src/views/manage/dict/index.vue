@@ -3,6 +3,7 @@ import { computed, h, reactive, ref, watch } from 'vue';
 import { NEllipsis, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { useNaivePaginatedTable } from '@/hooks/common/table';
+import { FORM_DETAIL_LOAD_DELAY, sleep } from '@/hooks/common/form';
 import {
   getButtonLabel,
   usePageButtonState,
@@ -43,25 +44,6 @@ function renderEllipsis(text?: string | number | null) {
 
 /** Buttons of the current route, provided by the backend menu tree */
 const { toolbarButtons, rowButtons, leftTopButtons, leftRowButtons } = usePageButtons();
-
-/** ---------------- all dictionaries (for the entry form select) ---------------- */
-
-const allDicts = ref<Api.SystemManage.Dict[]>([]);
-
-const dictOptions = computed(() =>
-  allDicts.value.map(dict => ({ label: `${dict.name}（${dict.code}）`, value: dict.id }))
-);
-
-/**
- * Load the dictionaries offered by the entry form select
- *
- * It is only needed while the entry form is open, so it is loaded when that form opens instead of
- * after every dictionary submit, which would query the dictionary list a second time.
- */
-async function loadAllDicts() {
-  const { data: res } = await fetchDictSearch({ page: 1, size: 999, items: [], orders: [] });
-  allDicts.value = res?.rows ?? [];
-}
 
 /** ---------------- dict main list ---------------- */
 
@@ -125,7 +107,8 @@ const {
   loading: dictLoading,
   getData: getDictData,
   getDataByPage: getDictDataByPage,
-  mobilePagination: dictPagination
+  mobilePagination: dictPagination,
+  scrollX: dictScrollX
 } = useNaivePaginatedTable({
   tableKey: 'manage_dict',
   api: () => fetchDictSearch(dictParams),
@@ -279,7 +262,8 @@ const {
   loading: entryLoading,
   getData: getEntryData,
   getDataByPage: getEntryDataByPage,
-  mobilePagination: entryPagination
+  mobilePagination: entryPagination,
+  scrollX: entryScrollX
 } = useNaivePaginatedTable({
   tableKey: 'manage_dict_entry',
   // the entries list is linked to the selected dictionary, so do not fetch on mount
@@ -383,6 +367,10 @@ const { bool: entryModalVisible, setTrue: openEntryModal, setFalse: closeEntryMo
 const entryOperateType = ref<NaiveUI.TableOperateType>('add');
 const editingEntry = ref<Api.SystemManage.DictEntryForm | null>(null);
 
+/** increments on every edit to drop the response of a superseded request */
+let dictDetailToken = 0;
+let entryDetailToken = 0;
+
 function handleDictAdd() {
   dictOperateType.value = 'add';
   editingDict.value = null;
@@ -390,13 +378,25 @@ function handleDictAdd() {
 }
 
 async function handleDictEdit(row: Api.SystemManage.Dict) {
+  dictOperateType.value = 'edit';
+  // open first so the dialog shows its skeleton, then load the detail
+  editingDict.value = null;
+  openDictModal();
+
+  const token = ++dictDetailToken;
+  await sleep(FORM_DETAIL_LOAD_DELAY);
+
+  // aborted while waiting (dialog closed or another row selected)
+  if (token !== dictDetailToken || !dictModalVisible.value || dictOperateType.value !== 'edit') return;
+
   const { data, error } = await fetchDictDetail(row.id);
 
-  if (error || !data) return;
+  // drop the response if the dialog changed while loading
+  if (token !== dictDetailToken || !dictModalVisible.value || dictOperateType.value !== 'edit') return;
 
-  dictOperateType.value = 'edit';
-  editingDict.value = { ...data, state: row.stateEnum };
-  openDictModal();
+  if (!error && data) {
+    editingDict.value = { ...data, state: row.stateEnum };
+  }
 }
 
 function handleDictSetState(row: Api.SystemManage.Dict, enable: boolean) {
@@ -439,19 +439,29 @@ function handleDictToolbarAction(button: Api.SystemManage.ButtonNode) {
 async function handleEntryAdd() {
   entryOperateType.value = 'add';
   editingEntry.value = null;
-  await loadAllDicts();
   openEntryModal();
 }
 
 async function handleEntryEdit(row: Api.SystemManage.DictEntry) {
+  entryOperateType.value = 'edit';
+  // open first so the dialog shows its skeleton, then load the detail
+  editingEntry.value = null;
+  openEntryModal();
+
+  const token = ++entryDetailToken;
+  await sleep(FORM_DETAIL_LOAD_DELAY);
+
+  // aborted while waiting (dialog closed or another row selected)
+  if (token !== entryDetailToken || !entryModalVisible.value || entryOperateType.value !== 'edit') return;
+
   const { data, error } = await fetchDictEntryDetail(row.id);
 
-  if (error || !data) return;
+  // drop the response if the dialog changed while loading
+  if (token !== entryDetailToken || !entryModalVisible.value || entryOperateType.value !== 'edit') return;
 
-  entryOperateType.value = 'edit';
-  editingEntry.value = { ...data, state: row.stateEnum, sn: row.sn };
-  await loadAllDicts();
-  openEntryModal();
+  if (!error && data) {
+    editingEntry.value = { ...data, state: row.stateEnum, sn: row.sn };
+  }
 }
 
 function handleEntrySetState(row: Api.SystemManage.DictEntry, enable: boolean) {
@@ -554,6 +564,11 @@ async function handleDictSubmitted() {
   closeDictModal();
   // only the list has to be refreshed here: the entry form select reloads when that form opens
   await getDictData();
+
+  // if a dictionary is selected on the right, reload its entries once (the change may affect them)
+  if (activeDictId.value) {
+    await getEntryData();
+  }
 }
 
 async function handleEntrySubmitted() {
@@ -588,6 +603,7 @@ async function handleEntrySubmitted() {
           :row-props="dictRowProps"
           :pagination="dictPagination"
           :paginate-single-page="true"
+          :scroll-x="dictScrollX"
           remote
           flex-height
           class="h-full"
@@ -626,6 +642,7 @@ async function handleEntrySubmitted() {
           :row-key="row => row.id"
           :pagination="entryPagination"
           :paginate-single-page="true"
+          :scroll-x="entryScrollX"
           remote
           flex-height
           class="h-full"
@@ -642,7 +659,6 @@ async function handleEntrySubmitted() {
       v-model:visible="entryModalVisible"
       :operate-type="entryOperateType"
       :row="editingEntry"
-      :dict-options="dictOptions"
       :active-dict-id="activeDictId"
       @submitted="handleEntrySubmitted"
     />

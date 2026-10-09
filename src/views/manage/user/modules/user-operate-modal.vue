@@ -61,6 +61,9 @@ function renderRoleLabel(option: SelectOption) {
 
 const title = computed(() => (props.operateType === 'add' ? $t('common.add') : $t('common.edit')));
 
+/** show the skeleton until the edit detail is loaded into `row` */
+const loading = computed(() => props.operateType === 'edit' && !props.row);
+
 const rules: FormRules = {
   username: defaultRequiredRule,
   nickname: defaultRequiredRule,
@@ -75,15 +78,17 @@ const rules: FormRules = {
 watch([visible, () => props.row], async ([val]) => {
   if (!val) return;
 
-  const { data: roles } = await fetchRoleSelect();
+  if (!roleOptions.value.length) {
+    const { data: roles } = await fetchRoleSelect();
 
-  // the select returns role rows; use `id` as value and `roleName` as label
-  roleOptions.value = (roles || []).map(role => ({
-    label: role.roleName,
-    value: String(role.id),
-    roleCode: role.roleCode,
-    remark: role.remark
-  }));
+    // the select returns role rows; use `id` as value and `roleName` as label
+    roleOptions.value = (roles || []).map(role => ({
+      label: role.roleName,
+      value: String(role.id),
+      roleCode: role.roleCode,
+      remark: role.remark
+    }));
+  }
 
   restoreValidation();
 
@@ -110,53 +115,44 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <NModal v-model:show="visible" preset="card" :title="title" class="w-560px">
-    <NForm
-      ref="formRef"
-      :model="model"
-      :rules="rules"
-      label-placement="left"
-      require-mark-placement="left"
-      :label-width="110"
-    >
-      <NFormItem path="username">
-        <template #label>
-          <FormLabel :label="$t('page.manage.user.username')" />
-        </template>
-        <NInput v-model:value="model.username" :placeholder="$t('page.manage.user.username')" />
-      </NFormItem>
-      <NFormItem path="nickname">
-        <template #label>
-          <FormLabel :label="$t('page.manage.user.nickname')" />
-        </template>
-        <NInput v-model:value="model.nickname" :placeholder="$t('page.manage.user.nickname')" />
-      </NFormItem>
-      <NFormItem path="phone">
-        <template #label>
-          <FormLabel :label="$t('page.manage.user.phone')" />
-        </template>
-        <NInput v-model:value="model.phone" :placeholder="$t('page.manage.user.phone')" />
-      </NFormItem>
-      <NFormItem path="mail">
-        <template #label>
-          <FormLabel :label="$t('page.manage.user.mail')" />
-        </template>
-        <NInput v-model:value="model.mail" :placeholder="$t('page.manage.user.mail')" />
-      </NFormItem>
-      <NFormItem path="roleIds">
-        <template #label>
-          <FormLabel :label="$t('page.manage.user.role')" />
-        </template>
-        <NSelect v-model:value="model.roleIds" multiple :options="roleOptions" :render-label="renderRoleLabel" />
-      </NFormItem>
-    </NForm>
+  <FormDialog ref="formRef" v-model:visible="visible" :title="title" :loading="loading" :model="model" :rules="rules">
+    <NFormItem path="username">
+      <template #label>
+        <FormLabel :label="$t('page.manage.user.username')" />
+      </template>
+      <NInput v-model:value="model.username" :placeholder="$t('page.manage.user.username')" />
+    </NFormItem>
+    <NFormItem path="nickname">
+      <template #label>
+        <FormLabel :label="$t('page.manage.user.nickname')" />
+      </template>
+      <NInput v-model:value="model.nickname" :placeholder="$t('page.manage.user.nickname')" />
+    </NFormItem>
+    <NFormItem path="phone">
+      <template #label>
+        <FormLabel :label="$t('page.manage.user.phone')" />
+      </template>
+      <NInput v-model:value="model.phone" :placeholder="$t('page.manage.user.phone')" />
+    </NFormItem>
+    <NFormItem path="mail">
+      <template #label>
+        <FormLabel :label="$t('page.manage.user.mail')" />
+      </template>
+      <NInput v-model:value="model.mail" :placeholder="$t('page.manage.user.mail')" />
+    </NFormItem>
+    <NFormItem class="col-span-2" path="roleIds">
+      <template #label>
+        <FormLabel :label="$t('page.manage.user.role')" />
+      </template>
+      <NSelect v-model:value="model.roleIds" multiple :options="roleOptions" :render-label="renderRoleLabel" />
+    </NFormItem>
     <template #footer>
       <NSpace justify="end">
         <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
         <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
       </NSpace>
     </template>
-  </NModal>
+  </FormDialog>
 </template>
 
 <style scoped></style>

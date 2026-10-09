@@ -76,52 +76,49 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <NModal v-model:show="visible" preset="card" :title="$t('page.manage.user.resetPassword')" class="w-480px">
-    <NForm
-      ref="formRef"
-      :model="model"
-      :rules="rules"
-      label-placement="left"
-      require-mark-placement="left"
-      :label-width="110"
-    >
-      <NFormItem v-if="username">
-        <template #label>
-          <FormLabel :label="$t('page.manage.user.username')" />
-        </template>
-        <span>{{ username }}</span>
-      </NFormItem>
-      <NFormItem path="password">
-        <template #label>
-          <FormLabel :label="$t('page.manage.user.newPassword')" />
-        </template>
-        <NInput
-          v-model:value="model.password"
-          type="password"
-          show-password-on="click"
-          :placeholder="$t('page.manage.user.newPasswordPlaceholder')"
-        />
-      </NFormItem>
-      <NFormItem path="confirmPassword">
-        <template #label>
-          <FormLabel :label="$t('page.manage.user.confirmPassword')" />
-        </template>
-        <NInput
-          v-model:value="model.confirmPassword"
-          type="password"
-          show-password-on="click"
-          :placeholder="$t('page.manage.user.confirmPasswordPlaceholder')"
-        />
-      </NFormItem>
-      <div class="text-12px text-gray-400">{{ $t('page.manage.user.resetPasswordTip') }}</div>
-    </NForm>
+  <FormDialog
+    ref="formRef"
+    v-model:visible="visible"
+    :title="$t('page.manage.user.resetPassword')"
+    :model="model"
+    :rules="rules"
+  >
+    <NFormItem v-if="username" class="col-span-2">
+      <template #label>
+        <FormLabel :label="$t('page.manage.user.username')" />
+      </template>
+      <span>{{ username }}</span>
+    </NFormItem>
+    <NFormItem path="password">
+      <template #label>
+        <FormLabel :label="$t('page.manage.user.newPassword')" />
+      </template>
+      <NInput
+        v-model:value="model.password"
+        type="password"
+        show-password-on="click"
+        :placeholder="$t('page.manage.user.newPasswordPlaceholder')"
+      />
+    </NFormItem>
+    <NFormItem path="confirmPassword">
+      <template #label>
+        <FormLabel :label="$t('page.manage.user.confirmPassword')" />
+      </template>
+      <NInput
+        v-model:value="model.confirmPassword"
+        type="password"
+        show-password-on="click"
+        :placeholder="$t('page.manage.user.confirmPasswordPlaceholder')"
+      />
+    </NFormItem>
+    <div class="col-span-2 text-12px text-gray-400">{{ $t('page.manage.user.resetPasswordTip') }}</div>
     <template #footer>
       <NSpace justify="end">
         <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
         <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
       </NSpace>
     </template>
-  </NModal>
+  </FormDialog>
 </template>
 
 <style scoped></style>

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { NButton, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
+import { FORM_DETAIL_LOAD_DELAY, sleep } from '@/hooks/common/form';
 import {
   getButtonLabel,
   usePageButtonState,
@@ -128,81 +129,82 @@ const operateColumnWidth = computed(() =>
   getTableOperateColumnWidth(rowButtons.value.map(button => getButtonLabel(button)))
 );
 
-const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
-  tableKey: TABLE_KEY,
-  api: () => fetchUserList({ page: params.page, size: params.size, items: params.items, orders: params.orders }),
-  transform: response => {
-    const { data: resData, error } = response;
+const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination, scrollX } =
+  useNaivePaginatedTable({
+    tableKey: TABLE_KEY,
+    api: () => fetchUserList({ page: params.page, size: params.size, items: params.items, orders: params.orders }),
+    transform: response => {
+      const { data: resData, error } = response;
 
-    if (!error) {
-      const { rows, page, size, total } = resData;
+      if (!error) {
+        const { rows, page, size, total } = resData;
 
-      return { data: rows || [], pageNum: page, pageSize: size, total };
+        return { data: rows || [], pageNum: page, pageSize: size, total };
+      }
+
+      return { data: [], pageNum: 1, pageSize: 10, total: 0 };
+    },
+    columns: () => {
+      const tableColumns: NaiveUI.TableColumn<Api.SystemManage.User>[] = [];
+
+      // hide the operate column when the route has no row buttons
+      if (rowButtons.value.length) {
+        tableColumns.push({
+          key: 'operate',
+          title: $t('common.operate'),
+          align: 'center',
+          width: operateColumnWidth.value,
+          render: (row: Api.SystemManage.User) =>
+            h(TableRowOperation, {
+              options: getOperateOptions(row),
+              onSelect: (key: string) => handleRowAction(row, key)
+            })
+        });
+      }
+
+      tableColumns.push(
+        { type: 'selection', align: 'center', width: 48 },
+        {
+          key: 'username',
+          title: $t('page.manage.user.username'),
+          align: 'center',
+          minWidth: 100,
+          render: row =>
+            h(
+              NButton,
+              { text: true, type: 'primary', onClick: () => handleUserDetail(row.id) },
+              { default: () => row.username }
+            )
+        },
+        { key: 'nickname', title: $t('page.manage.user.nickname'), align: 'center', minWidth: 100 },
+        { key: 'phone', title: $t('page.manage.user.phone'), align: 'center', minWidth: 120 },
+        { key: 'mail', title: $t('page.manage.user.mail'), align: 'center', minWidth: 160 },
+        {
+          key: 'state',
+          title: $t('page.manage.user.stateLabel'),
+          align: 'center',
+          width: 100,
+          render: row => {
+            const type = row.stateEnum === 'NORMAL' ? 'success' : row.stateEnum === 'FORBIDDEN' ? 'error' : 'warning';
+
+            return h(
+              NTag,
+              { type, size: 'small', bordered: false },
+              { default: () => $t(userStateRecord[row.stateEnum]) }
+            );
+          }
+        },
+        { key: 'registerTime', title: $t('page.manage.user.registerTime'), align: 'center', minWidth: 170 },
+        { key: 'lastLoginTime', title: $t('page.manage.user.lastLoginTime'), align: 'center', minWidth: 170 }
+      );
+
+      return tableColumns;
+    },
+    onPaginationParamsChange: paginationParams => {
+      params.page = paginationParams.page ?? 1;
+      params.size = paginationParams.pageSize ?? 10;
     }
-
-    return { data: [], pageNum: 1, pageSize: 10, total: 0 };
-  },
-  columns: () => {
-    const tableColumns: NaiveUI.TableColumn<Api.SystemManage.User>[] = [];
-
-    // hide the operate column when the route has no row buttons
-    if (rowButtons.value.length) {
-      tableColumns.push({
-        key: 'operate',
-        title: $t('common.operate'),
-        align: 'center',
-        width: operateColumnWidth.value,
-        render: (row: Api.SystemManage.User) =>
-          h(TableRowOperation, {
-            options: getOperateOptions(row),
-            onSelect: (key: string) => handleRowAction(row, key)
-          })
-      });
-    }
-
-    tableColumns.push(
-      { type: 'selection', align: 'center', width: 48 },
-      {
-        key: 'username',
-        title: $t('page.manage.user.username'),
-        align: 'center',
-        minWidth: 100,
-        render: row =>
-          h(
-            NButton,
-            { text: true, type: 'primary', onClick: () => handleUserDetail(row.id) },
-            { default: () => row.username }
-          )
-      },
-      { key: 'nickname', title: $t('page.manage.user.nickname'), align: 'center', minWidth: 100 },
-      { key: 'phone', title: $t('page.manage.user.phone'), align: 'center', minWidth: 120 },
-      { key: 'mail', title: $t('page.manage.user.mail'), align: 'center', minWidth: 160 },
-      {
-        key: 'state',
-        title: $t('page.manage.user.stateLabel'),
-        align: 'center',
-        width: 100,
-        render: row => {
-          const type = row.stateEnum === 'NORMAL' ? 'success' : row.stateEnum === 'FORBIDDEN' ? 'error' : 'warning';
-
-          return h(
-            NTag,
-            { type, size: 'small', bordered: false },
-            { default: () => $t(userStateRecord[row.stateEnum]) }
-          );
-        }
-      },
-      { key: 'registerTime', title: $t('page.manage.user.registerTime'), align: 'center', minWidth: 170 },
-      { key: 'lastLoginTime', title: $t('page.manage.user.lastLoginTime'), align: 'center', minWidth: 170 }
-    );
-
-    return tableColumns;
-  },
-  onPaginationParamsChange: paginationParams => {
-    params.page = paginationParams.page ?? 1;
-    params.size = paginationParams.pageSize ?? 10;
-  }
-});
+  });
 
 // the operate column is driven by the backend row buttons; keep it visible and leftmost
 watch(
@@ -270,13 +272,28 @@ function handleAdd() {
   openDrawer();
 }
 
+/** increments on every edit to drop the response of a superseded request */
+let editDetailToken = 0;
+
 async function handleEditUser(id: string) {
   operateType.value = 'edit';
+  // open first so the dialog shows its skeleton, then load the detail
+  editingData.value = null;
+  openDrawer();
+
+  const token = ++editDetailToken;
+  await sleep(FORM_DETAIL_LOAD_DELAY);
+
+  // aborted while waiting (dialog closed or another row selected)
+  if (token !== editDetailToken || !drawerVisible.value || operateType.value !== 'edit') return;
+
   const { data: detail, error } = await fetchUserDetail(id);
+
+  // drop the response if the dialog changed while loading
+  if (token !== editDetailToken || !drawerVisible.value || operateType.value !== 'edit') return;
 
   if (!error) {
     editingData.value = detail as unknown as Api.SystemManage.User;
-    openDrawer();
   }
 }
 
@@ -381,7 +398,7 @@ async function handleSubmitted() {
         :row-key="row => row.id"
         :pagination="tablePagination"
         :paginate-single-page="true"
-        :scroll-x="900"
+        :scroll-x="scrollX"
         remote
         flex-height
         class="h-full"

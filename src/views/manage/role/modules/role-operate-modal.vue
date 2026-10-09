@@ -67,45 +67,36 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <NModal v-model:show="visible" preset="card" :title="title" class="w-560px">
-    <NForm
-      ref="formRef"
-      :model="model"
-      :rules="rules"
-      label-placement="left"
-      require-mark-placement="left"
-      :label-width="110"
-    >
-      <NFormItem path="roleCode">
-        <template #label>
-          <FormLabel :label="$t('page.manage.role.roleCode')" />
-        </template>
-        <NInput
-          v-model:value="model.roleCode"
-          :disabled="operateType === 'edit'"
-          :placeholder="$t('page.manage.role.roleCode')"
-        />
-      </NFormItem>
-      <NFormItem path="roleName">
-        <template #label>
-          <FormLabel :label="$t('page.manage.role.roleName')" />
-        </template>
-        <NInput v-model:value="model.roleName" :placeholder="$t('page.manage.role.roleName')" />
-      </NFormItem>
-      <NFormItem path="remark">
-        <template #label>
-          <FormLabel :label="$t('page.manage.role.remark')" />
-        </template>
-        <NInput v-model:value="model.remark" type="textarea" :rows="3" :placeholder="$t('page.manage.role.remark')" />
-      </NFormItem>
-    </NForm>
+  <FormDialog ref="formRef" v-model:visible="visible" :title="title" :model="model" :rules="rules">
+    <NFormItem path="roleCode">
+      <template #label>
+        <FormLabel :label="$t('page.manage.role.roleCode')" />
+      </template>
+      <NInput
+        v-model:value="model.roleCode"
+        :disabled="operateType === 'edit'"
+        :placeholder="$t('page.manage.role.roleCode')"
+      />
+    </NFormItem>
+    <NFormItem path="roleName">
+      <template #label>
+        <FormLabel :label="$t('page.manage.role.roleName')" />
+      </template>
+      <NInput v-model:value="model.roleName" :placeholder="$t('page.manage.role.roleName')" />
+    </NFormItem>
+    <NFormItem class="col-span-2" path="remark">
+      <template #label>
+        <FormLabel :label="$t('page.manage.role.remark')" />
+      </template>
+      <NInput v-model:value="model.remark" type="textarea" :rows="3" :placeholder="$t('page.manage.role.remark')" />
+    </NFormItem>
     <template #footer>
       <NSpace justify="end">
         <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
         <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
       </NSpace>
     </template>
-  </NModal>
+  </FormDialog>
 </template>
 
 <style scoped></style>

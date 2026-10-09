@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, reactive, ref, watch } from 'vue';
 import { NEllipsis, NTag } from 'naive-ui';
-import { useNaivePaginatedTable } from '@/hooks/common/table';
+import { getTableScrollX, useNaivePaginatedTable } from '@/hooks/common/table';
 import { usePageButtons } from '@/hooks/business/page-buttons';
 import { fetchBindUserDict, fetchDictSearch, fetchUserDictDetail, fetchUserList } from '@/service/api';
 import { userStateOptions, userStateRecord } from '@/constants/business';
@@ -58,7 +58,7 @@ const params = reactive<Api.SystemManage.PageQo>({
 /** buttons of the current route, provided by the backend menu tree */
 const { leftTopButtons } = usePageButtons();
 
-const { columns, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
+const { columns, data, loading, getData, getDataByPage, mobilePagination, scrollX } = useNaivePaginatedTable({
   tableKey: 'manage_user_dict',
   api: () => fetchUserList(params),
   transform: response => {
@@ -123,6 +123,9 @@ const dictColumns = computed<NaiveUI.TableColumn<Api.SystemManage.Dict>[]>(() =>
   { key: 'name', title: $t('page.manage.dict.name'), minWidth: 120, render: row => renderEllipsis(row.name) },
   { key: 'remark', title: $t('page.manage.dict.remark'), minWidth: 120, render: row => renderEllipsis(row.remark) }
 ]);
+
+/** total width of the dictionary columns, drives the horizontal scrollbar of the right table */
+const dictScrollX = computed(() => getTableScrollX(dictColumns.value));
 
 async function loadAllDicts() {
   dictLoading.value = true;
@@ -242,6 +245,7 @@ function handleReset() {
           :row-props="rowProps"
           :pagination="mobilePagination"
           :paginate-single-page="true"
+          :scroll-x="scrollX"
           remote
           flex-height
           class="h-full"
@@ -269,6 +273,7 @@ function handleReset() {
             :loading="dictLoading"
             :row-key="row => row.id"
             :paginate-single-page="true"
+            :scroll-x="dictScrollX"
             size="small"
             flex-height
             class="min-h-0 flex-1"

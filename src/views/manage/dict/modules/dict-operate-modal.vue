@@ -38,12 +38,15 @@ const model = reactive<Api.SystemManage.DictForm>({
 
 const title = computed(() => (props.operateType === 'add' ? $t('common.add') : $t('common.edit')));
 
+/** show the skeleton until the edit detail is loaded into `row` */
+const loading = computed(() => props.operateType === 'edit' && !props.row);
+
 const rules: FormRules = {
   code: defaultRequiredRule,
   name: defaultRequiredRule
 };
 
-watch(visible, val => {
+watch([visible, () => props.row], ([val]) => {
   if (!val) return;
 
   restoreValidation();
@@ -71,51 +74,42 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <NModal v-model:show="visible" preset="card" :title="title" class="w-560px">
-    <NForm
-      ref="formRef"
-      :model="model"
-      :rules="rules"
-      label-placement="left"
-      require-mark-placement="left"
-      :label-width="110"
-    >
-      <NFormItem path="code">
-        <template #label>
-          <FormLabel :label="$t('page.manage.dict.code')" />
-        </template>
-        <NInput
-          v-model:value="model.code"
-          :disabled="operateType === 'edit'"
-          :placeholder="$t('page.manage.dict.code')"
-        />
-      </NFormItem>
-      <NFormItem path="name">
-        <template #label>
-          <FormLabel :label="$t('page.manage.dict.name')" />
-        </template>
-        <NInput v-model:value="model.name" :placeholder="$t('page.manage.dict.name')" />
-      </NFormItem>
-      <NFormItem path="whetherAuth">
-        <template #label>
-          <FormLabel :label="$t('page.manage.dict.whetherAuth')" />
-        </template>
-        <NSwitch v-model:value="model.whetherAuth" />
-      </NFormItem>
-      <NFormItem path="remark">
-        <template #label>
-          <FormLabel :label="$t('page.manage.dict.remark')" />
-        </template>
-        <NInput v-model:value="model.remark" type="textarea" :rows="3" :placeholder="$t('page.manage.dict.remark')" />
-      </NFormItem>
-    </NForm>
+  <FormDialog ref="formRef" v-model:visible="visible" :title="title" :loading="loading" :model="model" :rules="rules">
+    <NFormItem path="code">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.code')" />
+      </template>
+      <NInput
+        v-model:value="model.code"
+        :disabled="operateType === 'edit'"
+        :placeholder="$t('page.manage.dict.code')"
+      />
+    </NFormItem>
+    <NFormItem path="name">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.name')" />
+      </template>
+      <NInput v-model:value="model.name" :placeholder="$t('page.manage.dict.name')" />
+    </NFormItem>
+    <NFormItem path="whetherAuth">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.whetherAuth')" />
+      </template>
+      <NSwitch v-model:value="model.whetherAuth" />
+    </NFormItem>
+    <NFormItem class="col-span-2" path="remark">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.remark')" />
+      </template>
+      <NInput v-model:value="model.remark" type="textarea" :rows="3" :placeholder="$t('page.manage.dict.remark')" />
+    </NFormItem>
     <template #footer>
       <NSpace justify="end">
         <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
         <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
       </NSpace>
     </template>
-  </NModal>
+  </FormDialog>
 </template>
 
 <style scoped></style>

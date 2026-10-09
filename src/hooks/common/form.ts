@@ -4,6 +4,16 @@ import type { FormInst } from 'naive-ui';
 import { REG_CODE_SIX, REG_EMAIL, REG_PHONE, REG_PWD, REG_USER_NAME } from '@/constants/reg';
 import { $t } from '@/locales';
 
+/** default delay (ms) before loading the edit detail of a popup form dialog */
+export const FORM_DETAIL_LOAD_DELAY = 600;
+
+/** wait for the given duration (ms) */
+export function sleep(ms: number) {
+  return new Promise<void>(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export function useFormRules() {
   const patternRules = {
     username: {

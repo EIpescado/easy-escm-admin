@@ -139,6 +139,9 @@ const title = computed(() => {
   return $t('common.add');
 });
 
+/** show the skeleton until the edit detail is loaded into `row` */
+const loading = computed(() => props.operateType === 'edit' && !props.row);
+
 /** parse the props key-value pairs into an object for the request */
 function parseMenuProps(): Record<string, unknown> | null {
   const entries = model.props.filter(item => item.key);
@@ -225,7 +228,7 @@ const parentOptions = computed<TreeSelectOption[]>(() => [
   }
 ]);
 
-watch(visible, async val => {
+watch([visible, () => props.row], async ([val]) => {
   if (!val) return;
 
   restoreValidation();
@@ -315,224 +318,201 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <NModal v-model:show="visible" preset="card" :title="title" class="w-800px">
-    <div class="menu-form-scroll max-h-[70vh] overflow-y-auto pr-8px">
-      <NForm
-        ref="formRef"
-        :model="model"
-        :rules="rules"
-        label-placement="left"
-        require-mark-placement="left"
-        :label-width="110"
-      >
-        <div class="grid grid-cols-2 gap-x-16px gap-y-4px">
-          <NFormItem v-if="!model.beButton && !addTopMenu" path="pid">
-            <template #label>
-              <FormLabel :label="$t('page.manage.menu.parent')" :tip="$t('page.manage.menu.tips.parent')" />
-            </template>
-            <NTreeSelect
-              v-model:value="model.pid"
-              :options="parentOptions"
-              :placeholder="$t('page.manage.menu.parent')"
-            />
-          </NFormItem>
-          <NFormItem path="name">
-            <template #label>
-              <FormLabel :label="nameLabel" :tip="nameTip" />
-            </template>
-            <NInput
-              v-model:value="model.name"
-              :placeholder="nameLabel"
-              :disabled="!model.beButton && operateType === 'edit'"
-            />
-          </NFormItem>
-          <NFormItem :path="model.beButton ? 'icon' : 'meta.icon'">
-            <template #label>
-              <FormLabel :label="$t('page.manage.menu.icon')" :tip="$t('page.manage.menu.tips.icon')" />
-            </template>
-            <NInput v-model:value="iconValue" :placeholder="$t('page.manage.menu.iconPlaceholder')" />
-          </NFormItem>
-          <NFormItem :path="model.beButton ? 'i18nKey' : 'meta.i18nKey'">
-            <template #label>
-              <FormLabel :label="$t('page.manage.menu.i18nKey')" :tip="$t('page.manage.menu.tips.i18nKey')" />
-            </template>
-            <NInput v-model:value="i18nKeyValue" :placeholder="$t('page.manage.menu.i18nKey')" />
-          </NFormItem>
-          <NFormItem path="sn" required>
-            <template #label>
-              <FormLabel :label="$t('page.manage.menu.sn')" :tip="$t('page.manage.menu.tips.sn')" />
-            </template>
-            <NInputNumber v-model:value="model.sn" :min="0" class="w-full" />
-          </NFormItem>
-          <NFormItem path="permission">
-            <template #label>
-              <FormLabel :label="$t('page.manage.menu.permission')" :tip="$t('page.manage.menu.tips.permission')" />
-            </template>
-            <NInput v-model:value="model.permission" :placeholder="$t('page.manage.menu.permission')" />
-          </NFormItem>
+  <FormDialog ref="formRef" v-model:visible="visible" :title="title" :loading="loading" :model="model" :rules="rules">
+    <NFormItem v-if="!model.beButton && !addTopMenu" path="pid">
+      <template #label>
+        <FormLabel :label="$t('page.manage.menu.parent')" :tip="$t('page.manage.menu.tips.parent')" />
+      </template>
+      <NTreeSelect v-model:value="model.pid" :options="parentOptions" :placeholder="$t('page.manage.menu.parent')" />
+    </NFormItem>
+    <NFormItem path="name">
+      <template #label>
+        <FormLabel :label="nameLabel" :tip="nameTip" />
+      </template>
+      <NInput
+        v-model:value="model.name"
+        :placeholder="nameLabel"
+        :disabled="!model.beButton && operateType === 'edit'"
+      />
+    </NFormItem>
+    <NFormItem :path="model.beButton ? 'icon' : 'meta.icon'">
+      <template #label>
+        <FormLabel :label="$t('page.manage.menu.icon')" :tip="$t('page.manage.menu.tips.icon')" />
+      </template>
+      <NInput v-model:value="iconValue" :placeholder="$t('page.manage.menu.iconPlaceholder')" />
+    </NFormItem>
+    <NFormItem :path="model.beButton ? 'i18nKey' : 'meta.i18nKey'">
+      <template #label>
+        <FormLabel :label="$t('page.manage.menu.i18nKey')" :tip="$t('page.manage.menu.tips.i18nKey')" />
+      </template>
+      <NInput v-model:value="i18nKeyValue" :placeholder="$t('page.manage.menu.i18nKey')" />
+    </NFormItem>
+    <NFormItem path="sn" required>
+      <template #label>
+        <FormLabel :label="$t('page.manage.menu.sn')" :tip="$t('page.manage.menu.tips.sn')" />
+      </template>
+      <NInputNumber v-model:value="model.sn" :min="0" class="w-full" />
+    </NFormItem>
+    <NFormItem path="permission">
+      <template #label>
+        <FormLabel :label="$t('page.manage.menu.permission')" :tip="$t('page.manage.menu.tips.permission')" />
+      </template>
+      <NInput v-model:value="model.permission" :placeholder="$t('page.manage.menu.permission')" />
+    </NFormItem>
 
-          <template v-if="model.beButton">
-            <NFormItem path="click">
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.click')" :tip="$t('page.manage.menu.tips.click')" />
-              </template>
-              <NInput v-model:value="model.click" :placeholder="$t('page.manage.menu.click')" />
-            </NFormItem>
-            <NFormItem path="position">
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.buttonPosition')" :tip="$t('page.manage.menu.tips.position')" />
-              </template>
-              <NSelect
-                v-model:value="model.position"
-                tag
-                filterable
-                :options="positionOptions"
-                :placeholder="$t('page.manage.menu.buttonPosition')"
-              />
-            </NFormItem>
-          </template>
+    <template v-if="model.beButton">
+      <NFormItem path="click">
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.click')" :tip="$t('page.manage.menu.tips.click')" />
+        </template>
+        <NInput v-model:value="model.click" :placeholder="$t('page.manage.menu.click')" />
+      </NFormItem>
+      <NFormItem path="position">
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.buttonPosition')" :tip="$t('page.manage.menu.tips.position')" />
+        </template>
+        <NSelect
+          v-model:value="model.position"
+          tag
+          filterable
+          :options="positionOptions"
+          :placeholder="$t('page.manage.menu.buttonPosition')"
+        />
+      </NFormItem>
+    </template>
 
-          <template v-else>
-            <NFormItem path="meta.title">
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.title')" :tip="$t('page.manage.menu.tips.title')" />
-              </template>
-              <NInput v-model:value="model.meta.title" :placeholder="$t('page.manage.menu.title')" />
-            </NFormItem>
-            <NFormItem path="path">
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.path')" :tip="$t('page.manage.menu.tips.path')" />
-              </template>
-              <NInput v-model:value="model.path" :placeholder="$t('page.manage.menu.path')" />
-            </NFormItem>
-            <NFormItem path="component">
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.component')" :tip="$t('page.manage.menu.tips.component')" />
-              </template>
-              <NSelect
-                v-model:value="model.component"
-                tag
-                filterable
-                :disabled="addTopMenu"
-                :options="componentOptions"
-                :placeholder="$t('page.manage.menu.componentPlaceholder')"
-              />
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.localIcon')" :tip="$t('page.manage.menu.tips.localIcon')" />
-              </template>
-              <NInput v-model:value="model.meta.localIcon" :placeholder="$t('page.manage.menu.localIcon')" />
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.roles')" :tip="$t('page.manage.menu.tips.roles')" />
-              </template>
-              <NSelect
-                v-model:value="model.meta.roles"
-                multiple
-                :options="roleOptions"
-                :placeholder="$t('page.manage.menu.roles')"
-              />
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.href')" :tip="$t('page.manage.menu.tips.href')" />
-              </template>
-              <NInput v-model:value="model.meta.href" :placeholder="$t('page.manage.menu.href')" />
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.activeMenu')" :tip="$t('page.manage.menu.tips.activeMenu')" />
-              </template>
-              <NInput v-model:value="model.meta.activeMenu" :placeholder="$t('page.manage.menu.activeMenu')" />
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel
-                  :label="$t('page.manage.menu.fixedIndexInTab')"
-                  :tip="$t('page.manage.menu.tips.fixedIndexInTab')"
-                />
-              </template>
-              <NInputNumber v-model:value="model.meta.fixedIndexInTab" :min="0" class="w-full" />
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.keepAlive')" :tip="$t('page.manage.menu.tips.keepAlive')" />
-              </template>
-              <NRadioGroup v-model:value="model.meta.keepAlive">
-                <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
-                <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
-              </NRadioGroup>
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.constant')" :tip="$t('page.manage.menu.tips.constant')" />
-              </template>
-              <NRadioGroup v-model:value="model.meta.constant">
-                <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
-                <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
-              </NRadioGroup>
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.hidden')" :tip="$t('page.manage.menu.tips.hidden')" />
-              </template>
-              <NRadioGroup v-model:value="model.meta.hideInMenu">
-                <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
-                <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
-              </NRadioGroup>
-            </NFormItem>
-            <NFormItem>
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.multiTab')" :tip="$t('page.manage.menu.tips.multiTab')" />
-              </template>
-              <NRadioGroup v-model:value="model.meta.multiTab">
-                <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
-                <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
-              </NRadioGroup>
-            </NFormItem>
-            <NFormItem class="col-span-2">
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.query')" :tip="$t('page.manage.menu.tips.query')" />
-              </template>
-              <NDynamicInput v-model:value="model.meta.query" :on-create="createKeyValueItem">
-                <template #default="{ value }">
-                  <div class="w-full flex gap-8px">
-                    <NInput v-model:value="value.key" :placeholder="$t('page.manage.menu.queryKey')" />
-                    <NInput v-model:value="value.value" :placeholder="$t('page.manage.menu.queryValue')" />
-                  </div>
-                </template>
-              </NDynamicInput>
-            </NFormItem>
-            <NFormItem class="col-span-2">
-              <template #label>
-                <FormLabel :label="$t('page.manage.menu.props')" :tip="$t('page.manage.menu.tips.props')" />
-              </template>
-              <NDynamicInput v-model:value="model.props" :on-create="createKeyValueItem">
-                <template #default="{ value }">
-                  <div class="w-full flex gap-8px">
-                    <NInput v-model:value="value.key" :placeholder="$t('page.manage.menu.queryKey')" />
-                    <NInput v-model:value="value.value" :placeholder="$t('page.manage.menu.queryValue')" />
-                  </div>
-                </template>
-              </NDynamicInput>
-            </NFormItem>
+    <template v-else>
+      <NFormItem path="meta.title">
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.title')" :tip="$t('page.manage.menu.tips.title')" />
+        </template>
+        <NInput v-model:value="model.meta.title" :placeholder="$t('page.manage.menu.title')" />
+      </NFormItem>
+      <NFormItem path="path">
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.path')" :tip="$t('page.manage.menu.tips.path')" />
+        </template>
+        <NInput v-model:value="model.path" :placeholder="$t('page.manage.menu.path')" />
+      </NFormItem>
+      <NFormItem path="component">
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.component')" :tip="$t('page.manage.menu.tips.component')" />
+        </template>
+        <NSelect
+          v-model:value="model.component"
+          tag
+          filterable
+          :disabled="addTopMenu"
+          :options="componentOptions"
+          :placeholder="$t('page.manage.menu.componentPlaceholder')"
+        />
+      </NFormItem>
+      <NFormItem>
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.localIcon')" :tip="$t('page.manage.menu.tips.localIcon')" />
+        </template>
+        <NInput v-model:value="model.meta.localIcon" :placeholder="$t('page.manage.menu.localIcon')" />
+      </NFormItem>
+      <NFormItem>
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.roles')" :tip="$t('page.manage.menu.tips.roles')" />
+        </template>
+        <NSelect
+          v-model:value="model.meta.roles"
+          multiple
+          :options="roleOptions"
+          :placeholder="$t('page.manage.menu.roles')"
+        />
+      </NFormItem>
+      <NFormItem>
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.href')" :tip="$t('page.manage.menu.tips.href')" />
+        </template>
+        <NInput v-model:value="model.meta.href" :placeholder="$t('page.manage.menu.href')" />
+      </NFormItem>
+      <NFormItem>
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.activeMenu')" :tip="$t('page.manage.menu.tips.activeMenu')" />
+        </template>
+        <NInput v-model:value="model.meta.activeMenu" :placeholder="$t('page.manage.menu.activeMenu')" />
+      </NFormItem>
+      <NFormItem>
+        <template #label>
+          <FormLabel
+            :label="$t('page.manage.menu.fixedIndexInTab')"
+            :tip="$t('page.manage.menu.tips.fixedIndexInTab')"
+          />
+        </template>
+        <NInputNumber v-model:value="model.meta.fixedIndexInTab" :min="0" class="w-full" />
+      </NFormItem>
+      <NFormItem>
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.keepAlive')" :tip="$t('page.manage.menu.tips.keepAlive')" />
+        </template>
+        <NRadioGroup v-model:value="model.meta.keepAlive">
+          <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
+          <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
+        </NRadioGroup>
+      </NFormItem>
+      <NFormItem>
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.constant')" :tip="$t('page.manage.menu.tips.constant')" />
+        </template>
+        <NRadioGroup v-model:value="model.meta.constant">
+          <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
+          <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
+        </NRadioGroup>
+      </NFormItem>
+      <NFormItem>
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.hidden')" :tip="$t('page.manage.menu.tips.hidden')" />
+        </template>
+        <NRadioGroup v-model:value="model.meta.hideInMenu">
+          <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
+          <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
+        </NRadioGroup>
+      </NFormItem>
+      <NFormItem>
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.multiTab')" :tip="$t('page.manage.menu.tips.multiTab')" />
+        </template>
+        <NRadioGroup v-model:value="model.meta.multiTab">
+          <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
+          <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
+        </NRadioGroup>
+      </NFormItem>
+      <NFormItem class="col-span-2">
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.query')" :tip="$t('page.manage.menu.tips.query')" />
+        </template>
+        <NDynamicInput v-model:value="model.meta.query" :on-create="createKeyValueItem">
+          <template #default="{ value }">
+            <div class="w-full flex gap-8px">
+              <NInput v-model:value="value.key" :placeholder="$t('page.manage.menu.queryKey')" />
+              <NInput v-model:value="value.value" :placeholder="$t('page.manage.menu.queryValue')" />
+            </div>
           </template>
-        </div>
-      </NForm>
-    </div>
+        </NDynamicInput>
+      </NFormItem>
+      <NFormItem class="col-span-2">
+        <template #label>
+          <FormLabel :label="$t('page.manage.menu.props')" :tip="$t('page.manage.menu.tips.props')" />
+        </template>
+        <NDynamicInput v-model:value="model.props" :on-create="createKeyValueItem">
+          <template #default="{ value }">
+            <div class="w-full flex gap-8px">
+              <NInput v-model:value="value.key" :placeholder="$t('page.manage.menu.queryKey')" />
+              <NInput v-model:value="value.value" :placeholder="$t('page.manage.menu.queryValue')" />
+            </div>
+          </template>
+        </NDynamicInput>
+      </NFormItem>
+    </template>
     <template #footer>
       <NSpace justify="end">
         <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
         <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
       </NSpace>
     </template>
-  </NModal>
+  </FormDialog>
 </template>
-
-<style scoped lang="scss">
-.menu-form-scroll {
-  @include scrollbar();
-}
-</style>

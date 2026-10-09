@@ -36,6 +36,18 @@ const SELECTION_KEY = '__selection__';
 const EXPAND_KEY = '__expand__';
 
 /**
+ * Calculate the total width of the visible columns.
+ *
+ * Used as the `scroll-x` of the data table: when the total width exceeds the container width, the table shows a
+ * horizontal scrollbar, otherwise the columns stretch to fill the container.
+ */
+export function getTableScrollX<ApiData>(columns: NaiveUI.TableColumn<ApiData>[]) {
+  return columns.reduce((acc, column) => {
+    return acc + Number(column.width ?? column.minWidth ?? 120);
+  }, 0);
+}
+
+/**
  * Restore and persist the column checks of a table
  *
  * The stored check state (`checked` / `fixed` / order) is merged onto the current default checks,
@@ -86,11 +98,7 @@ export function useNaiveTable<ResponseData, ApiData>(options: UseNaiveTableOptio
   });
 
   // calculate the total width of the table this is used for horizontal scrolling
-  const scrollX = computed(() => {
-    return result.columns.value.reduce((acc, column) => {
-      return acc + Number(column.width ?? column.minWidth ?? 120);
-    }, 0);
-  });
+  const scrollX = computed(() => getTableScrollX(result.columns.value));
 
   scope.run(() => {
     bindColumnChecksStorage(result.columnChecks, options.tableKey);
@@ -197,6 +205,9 @@ export function useNaivePaginatedTable<ResponseData, ApiData>(
     await result.getData();
   }
 
+  // total width of the visible columns, drives the horizontal scrollbar of the table
+  const scrollX = computed(() => getTableScrollX(result.columns.value));
+
   scope.run(() => {
     bindColumnChecksStorage(result.columnChecks, options.tableKey);
 
@@ -222,7 +233,8 @@ export function useNaivePaginatedTable<ResponseData, ApiData>(
     ...result,
     getDataByPage,
     pagination,
-    mobilePagination
+    mobilePagination,
+    scrollX
   };
 }
 

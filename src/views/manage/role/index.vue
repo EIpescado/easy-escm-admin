@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, watch, type VNode } from 'vue';
+import { computed, h, onBeforeUnmount, reactive, ref, watch, type VNode } from 'vue';
 import type { TreeOption } from 'naive-ui';
 import { NTag } from 'naive-ui';
 import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
@@ -125,63 +125,64 @@ function getOperateOptions(row: Api.SystemManage.Role) {
 
 const operateColumnWidth = computed(() => getTableOperateColumnWidth(rowButtons.value.map(button => button.name)));
 
-const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
-  tableKey: TABLE_KEY,
-  api: () => fetchRoleList({ page: params.page, size: params.size, items: params.items, orders: params.orders }),
-  transform: response => {
-    const { data: resData, error } = response;
+const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination, scrollX } =
+  useNaivePaginatedTable({
+    tableKey: TABLE_KEY,
+    api: () => fetchRoleList({ page: params.page, size: params.size, items: params.items, orders: params.orders }),
+    transform: response => {
+      const { data: resData, error } = response;
 
-    if (!error) {
-      const { rows, page, size, total } = resData;
+      if (!error) {
+        const { rows, page, size, total } = resData;
 
-      return { data: rows || [], pageNum: page, pageSize: size, total };
+        return { data: rows || [], pageNum: page, pageSize: size, total };
+      }
+
+      return { data: [], pageNum: 1, pageSize: 10, total: 0 };
+    },
+    columns: () => {
+      const tableColumns: NaiveUI.TableColumn<Api.SystemManage.Role>[] = [];
+
+      // hide the operate column when the route has no row buttons
+      if (rowButtons.value.length) {
+        tableColumns.push({
+          key: 'operate',
+          title: $t('common.operate'),
+          align: 'center',
+          width: operateColumnWidth.value,
+          render: (row: Api.SystemManage.Role) =>
+            h(TableRowOperation, {
+              options: getOperateOptions(row),
+              onSelect: (key: string) => handleRowAction(row, key)
+            })
+        });
+      }
+
+      tableColumns.push(
+        { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
+        { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
+        {
+          key: 'state',
+          title: $t('page.manage.role.stateLabel'),
+          align: 'center',
+          width: 100,
+          render: row =>
+            h(
+              NTag,
+              { type: row.stateEnum === 'ON' ? 'success' : 'error', size: 'small', bordered: false },
+              { default: () => $t(roleStateRecord[row.stateEnum]) }
+            )
+        },
+        { key: 'remark', title: $t('page.manage.role.remark'), align: 'center', minWidth: 160 }
+      );
+
+      return tableColumns;
+    },
+    onPaginationParamsChange: paginationParams => {
+      params.page = paginationParams.page ?? 1;
+      params.size = paginationParams.pageSize ?? 10;
     }
-
-    return { data: [], pageNum: 1, pageSize: 10, total: 0 };
-  },
-  columns: () => {
-    const tableColumns: NaiveUI.TableColumn<Api.SystemManage.Role>[] = [];
-
-    // hide the operate column when the route has no row buttons
-    if (rowButtons.value.length) {
-      tableColumns.push({
-        key: 'operate',
-        title: $t('common.operate'),
-        align: 'center',
-        width: operateColumnWidth.value,
-        render: (row: Api.SystemManage.Role) =>
-          h(TableRowOperation, {
-            options: getOperateOptions(row),
-            onSelect: (key: string) => handleRowAction(row, key)
-          })
-      });
-    }
-
-    tableColumns.push(
-      { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
-      { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
-      {
-        key: 'state',
-        title: $t('page.manage.role.stateLabel'),
-        align: 'center',
-        width: 100,
-        render: row =>
-          h(
-            NTag,
-            { type: row.stateEnum === 'ON' ? 'success' : 'error', size: 'small', bordered: false },
-            { default: () => $t(roleStateRecord[row.stateEnum]) }
-          )
-      },
-      { key: 'remark', title: $t('page.manage.role.remark'), align: 'center', minWidth: 160 }
-    );
-
-    return tableColumns;
-  },
-  onPaginationParamsChange: paginationParams => {
-    params.page = paginationParams.page ?? 1;
-    params.size = paginationParams.pageSize ?? 10;
-  }
-});
+  });
 
 // the operate column is driven by the backend row buttons; keep it visible and leftmost
 watch(
@@ -313,30 +314,55 @@ const menuNodeMaps = computed(() => {
   return { nodeMap, parentMap };
 });
 
-/**
- * Select a role and load its bound ids (menus + buttons) as the checked keys
- *
- * While a load is in flight the tree spins and blocks interaction, and further selections are
- * ignored, so clicking several rows in a row cannot fire a request per row.
- */
-async function selectRole(row: Api.SystemManage.Role) {
-  if (menuLoading.value) return;
+/** debounce delay before loading the bound ids of a selected role */
+const LOAD_MENU_IDS_DELAY = 600;
 
-  activeRoleId.value = row.id;
-  menuLoading.value = true;
+/** debounce timer for the menu/button ids request, so clicking several rows in a row fires one request */
+let loadMenuIdsTimer: ReturnType<typeof setTimeout> | undefined;
 
+function clearLoadMenuIdsTimer() {
+  if (loadMenuIdsTimer !== undefined) {
+    clearTimeout(loadMenuIdsTimer);
+    loadMenuIdsTimer = undefined;
+  }
+}
+
+/** load the bound ids (menus + buttons) of a role as the checked keys */
+async function loadRoleMenuIds(roleId: string) {
   try {
-    const { data: ids } = await fetchRoleMenuIds(row.id);
+    const { data: ids } = await fetchRoleMenuIds(roleId);
 
     // ignore stale responses when the selection changed while loading
-    if (activeRoleId.value !== row.id) return;
+    if (activeRoleId.value !== roleId) return;
 
     // the backend returns both menu ids and button ids; the tree checks exactly these
     checkedKeys.value = ids || [];
   } finally {
-    menuLoading.value = false;
+    // only stop spinning for the role that is still selected
+    if (activeRoleId.value === roleId) {
+      menuLoading.value = false;
+    }
   }
 }
+
+/**
+ * Select a role and load its bound ids (menus + buttons) as the checked keys
+ *
+ * The request is debounced ({@link LOAD_MENU_IDS_DELAY}ms) so rapidly clicking several rows only fires
+ * one request, for the last selected role.
+ */
+function selectRole(row: Api.SystemManage.Role) {
+  activeRoleId.value = row.id;
+  menuLoading.value = true;
+
+  clearLoadMenuIdsTimer();
+  loadMenuIdsTimer = setTimeout(() => {
+    loadMenuIdsTimer = undefined;
+    loadRoleMenuIds(row.id);
+  }, LOAD_MENU_IDS_DELAY);
+}
+
+onBeforeUnmount(clearLoadMenuIdsTimer);
 
 /** highlight the selected role row and select it on click */
 function rowClassName(row: Api.SystemManage.Role) {
@@ -364,6 +390,8 @@ watch(
     if (!rows.some(row => row.id === activeRoleId.value)) {
       activeRoleId.value = '';
       checkedKeys.value = [];
+      clearLoadMenuIdsTimer();
+      menuLoading.value = false;
     }
   },
   { immediate: true }
@@ -559,6 +587,7 @@ async function handleSubmitted() {
           :row-props="rowProps"
           :pagination="tablePagination"
           :paginate-single-page="true"
+          :scroll-x="scrollX"
           remote
           flex-height
           class="h-full"

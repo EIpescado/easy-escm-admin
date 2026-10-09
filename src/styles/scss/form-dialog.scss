@@ -1,0 +1,44 @@
+/**
+ * Shared layout for popup (modal) forms.
+ *
+ * Apply `form-dialog` to an `NModal` (`preset="card"`):
+ * - a unified dialog width;
+ * - a scrollable body capped at 70vh with the app scrollbar;
+ * - the same two-column field grid as the add-menu dialog.
+ *
+ * A field that should span the whole width only needs the `col-span-2` utility class.
+ * Add `form-dialog--fullscreen` to make the dialog fill the viewport.
+ */
+.form-dialog {
+  width: 800px;
+
+  .n-card-content {
+    max-height: 70vh;
+    overflow-y: auto;
+    // keep the horizontal padding symmetric while reserving room for the scrollbar
+    padding-right: calc(var(--n-padding-left, 24px) + 8px);
+
+    @include scrollbar();
+  }
+
+  .n-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+    row-gap: 4px;
+  }
+
+  &.form-dialog--fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    margin: 0;
+    border-radius: 0;
+
+    // let the body grow to fill the dialog instead of being capped at 70vh
+    .n-card-content {
+      max-height: none;
+    }
+  }
+}

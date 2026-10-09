@@ -12,13 +12,11 @@ defineOptions({
 interface Props {
   operateType: NaiveUI.TableOperateType;
   row: Api.SystemManage.DictEntryForm | null;
-  /** selectable dictionaries, used by the owning-dictionary field */
-  dictOptions: { label: string; value: string }[];
   /**
    * Dictionary selected in the left list
    *
-   * When adding an entry the owning-dictionary field is fixed to it, so the new entry always belongs
-   * to the dictionary currently being browsed.
+   * When adding an entry it is passed silently as the owning dictionary (`pid`), so the new entry
+   * always belongs to the dictionary currently being browsed.
    */
   activeDictId?: string;
 }
@@ -53,15 +51,15 @@ const model = reactive<Api.SystemManage.DictEntryForm>({
 
 const title = computed(() => (props.operateType === 'add' ? $t('common.add') : $t('common.edit')));
 
-/** the owning dictionary cannot be changed when adding, it follows the selected dictionary */
-const isDictLocked = computed(() => props.operateType === 'add');
+/** show the skeleton until the edit detail is loaded into `row` */
+const loading = computed(() => props.operateType === 'edit' && !props.row);
 
 const rules: FormRules = {
   code: defaultRequiredRule,
   pid: defaultRequiredRule
 };
 
-watch(visible, val => {
+watch([visible, () => props.row], ([val]) => {
   if (!val) return;
 
   restoreValidation();
@@ -69,7 +67,9 @@ watch(visible, val => {
   Object.assign(model, {
     id: props.row?.id,
     code: props.row?.code ?? '',
-    pid: isDictLocked.value ? (props.activeDictId ?? '') : (props.row?.pid ?? ''),
+    // the owning dictionary is never edited: it is passed silently, either the dictionary selected in
+    // the left list (add) or the entry's own dictionary (edit, falling back to the selected one)
+    pid: props.operateType === 'add' ? (props.activeDictId ?? '') : props.row?.pid || props.activeDictId || '',
     val: props.row?.val ?? '',
     val2: props.row?.val2 ?? '',
     val3: props.row?.val3 ?? '',
@@ -93,84 +93,61 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <NModal v-model:show="visible" preset="card" :title="title" class="w-640px">
-    <NForm
-      ref="formRef"
-      :model="model"
-      :rules="rules"
-      label-placement="left"
-      require-mark-placement="left"
-      :label-width="110"
-    >
-      <div class="grid grid-cols-2 gap-x-16px gap-y-4px">
-        <NFormItem path="pid">
-          <template #label>
-            <FormLabel :label="$t('page.manage.dict.name')" />
-          </template>
-          <NSelect
-            v-model:value="model.pid"
-            filterable
-            :disabled="isDictLocked"
-            :options="dictOptions"
-            :placeholder="$t('page.manage.dict.name')"
-          />
-        </NFormItem>
-        <NFormItem path="code">
-          <template #label>
-            <FormLabel :label="$t('page.manage.dict.entry.code')" />
-          </template>
-          <NInput v-model:value="model.code" :placeholder="$t('page.manage.dict.entry.code')" />
-        </NFormItem>
-        <NFormItem path="sn">
-          <template #label>
-            <FormLabel :label="$t('page.manage.dict.entry.sn')" />
-          </template>
-          <NInputNumber v-model:value="model.sn" :min="0" class="w-full" />
-        </NFormItem>
-        <NFormItem path="val">
-          <template #label>
-            <FormLabel :label="$t('page.manage.dict.entry.val')" />
-          </template>
-          <NInput v-model:value="model.val" :placeholder="$t('page.manage.dict.entry.val')" />
-        </NFormItem>
-        <NFormItem path="val2">
-          <template #label>
-            <FormLabel :label="$t('page.manage.dict.entry.val2')" />
-          </template>
-          <NInput v-model:value="model.val2" :placeholder="$t('page.manage.dict.entry.val2')" />
-        </NFormItem>
-        <NFormItem path="val3">
-          <template #label>
-            <FormLabel :label="$t('page.manage.dict.entry.val3')" />
-          </template>
-          <NInput v-model:value="model.val3" :placeholder="$t('page.manage.dict.entry.val3')" />
-        </NFormItem>
-        <NFormItem path="val4">
-          <template #label>
-            <FormLabel :label="$t('page.manage.dict.entry.val4')" />
-          </template>
-          <NInput v-model:value="model.val4" :placeholder="$t('page.manage.dict.entry.val4')" />
-        </NFormItem>
-        <NFormItem class="col-span-2" path="remark">
-          <template #label>
-            <FormLabel :label="$t('page.manage.dict.entry.remark')" />
-          </template>
-          <NInput
-            v-model:value="model.remark"
-            type="textarea"
-            :rows="2"
-            :placeholder="$t('page.manage.dict.entry.remark')"
-          />
-        </NFormItem>
-      </div>
-    </NForm>
+  <FormDialog ref="formRef" v-model:visible="visible" :title="title" :loading="loading" :model="model" :rules="rules">
+    <NFormItem path="code">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.entry.code')" />
+      </template>
+      <NInput v-model:value="model.code" :placeholder="$t('page.manage.dict.entry.code')" />
+    </NFormItem>
+    <NFormItem path="sn">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.entry.sn')" />
+      </template>
+      <NInputNumber v-model:value="model.sn" :min="0" class="w-full" />
+    </NFormItem>
+    <NFormItem path="val">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.entry.val')" />
+      </template>
+      <NInput v-model:value="model.val" :placeholder="$t('page.manage.dict.entry.val')" />
+    </NFormItem>
+    <NFormItem path="val2">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.entry.val2')" />
+      </template>
+      <NInput v-model:value="model.val2" :placeholder="$t('page.manage.dict.entry.val2')" />
+    </NFormItem>
+    <NFormItem path="val3">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.entry.val3')" />
+      </template>
+      <NInput v-model:value="model.val3" :placeholder="$t('page.manage.dict.entry.val3')" />
+    </NFormItem>
+    <NFormItem path="val4">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.entry.val4')" />
+      </template>
+      <NInput v-model:value="model.val4" :placeholder="$t('page.manage.dict.entry.val4')" />
+    </NFormItem>
+    <NFormItem class="col-span-2" path="remark">
+      <template #label>
+        <FormLabel :label="$t('page.manage.dict.entry.remark')" />
+      </template>
+      <NInput
+        v-model:value="model.remark"
+        type="textarea"
+        :rows="2"
+        :placeholder="$t('page.manage.dict.entry.remark')"
+      />
+    </NFormItem>
     <template #footer>
       <NSpace justify="end">
         <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
         <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
       </NSpace>
     </template>
-  </NModal>
+  </FormDialog>
 </template>
 
 <style scoped></style>

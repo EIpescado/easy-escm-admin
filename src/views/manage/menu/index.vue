@@ -17,6 +17,8 @@ import {
   type PageButtonStateRules
 } from '@/hooks/business/page-buttons';
 import { useSvgIcon } from '@/hooks/common/icon';
+import { FORM_DETAIL_LOAD_DELAY, sleep } from '@/hooks/common/form';
+import { getTableScrollX } from '@/hooks/common/table';
 import { showConfirmDialog } from '@/utils/common';
 import { getMenuNodeType, MENU_TYPE_LABEL_KEYS, MENU_TYPE_TAG_TYPES } from '@/utils/menu';
 import { getTableOperateColumnWidth } from '@/utils/table';
@@ -323,18 +325,33 @@ function handleAddButton(row: Api.SystemManage.MenuNode) {
   openModal();
 }
 
-/** load the node detail from the backend before opening the edit form */
+/** increments on every edit to drop the response of a superseded request */
+let editDetailToken = 0;
+
+/** load the node detail from the backend after opening the edit form (which shows a skeleton first) */
 async function handleEdit(row: Api.SystemManage.MenuNode) {
-  const { data, error } = await (row.beButton ? fetchGetButtonDetail(row.id) : fetchGetMenuDetail(row.id));
-
-  if (error || !data) return;
-
   operateType.value = 'edit';
   addButtonMode.value = false;
   addTopMenuMode.value = false;
+  // open first so the dialog shows its skeleton, then load the detail
+  editingRow.value = null;
+  parentId.value = row.pid;
+  openModal();
+
+  const token = ++editDetailToken;
+  await sleep(FORM_DETAIL_LOAD_DELAY);
+
+  // aborted while waiting (dialog closed or another row selected)
+  if (token !== editDetailToken || !modalVisible.value || operateType.value !== 'edit') return;
+
+  const { data, error } = await (row.beButton ? fetchGetButtonDetail(row.id) : fetchGetMenuDetail(row.id));
+
+  // drop the response if the dialog changed while loading
+  if (token !== editDetailToken || !modalVisible.value || operateType.value !== 'edit') return;
+  if (error || !data) return;
+
   editingRow.value = data;
   parentId.value = data.pid;
-  openModal();
 }
 
 function handleDelete(row: Api.SystemManage.MenuNode) {
@@ -584,6 +601,9 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.MenuNode>[]>(() =>
 
   return tableColumns;
 });
+
+/** total width of the menu columns, drives the horizontal scrollbar of the table */
+const scrollX = computed(() => getTableScrollX(columns.value));
 </script>
 
 <template>
@@ -629,6 +649,7 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.MenuNode>[]>(() =>
         :data="filteredMenuTree"
         :loading="loading"
         :row-key="row => row.id"
+        :scroll-x="scrollX"
         flex-height
         class="h-full"
       />
