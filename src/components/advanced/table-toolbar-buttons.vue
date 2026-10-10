@@ -28,20 +28,26 @@ const emit = defineEmits<Emits>();
 </script>
 
 <template>
-  <NButton
-    v-for="button in buttons"
-    :key="button.id"
-    size="small"
-    ghost
-    type="primary"
-    :disabled="disabled(button)"
-    @click="emit('select', button)"
-  >
-    <template v-if="button.icon" #icon>
-      <SvgIcon :icon="button.icon" />
-    </template>
-    {{ getButtonLabel(button) }}
-  </NButton>
+  <!--
+    The buttons must live in their own flex row: without it they become direct flex items of the
+    header and a `justify-between` parent spreads them across the whole width.
+  -->
+  <div class="flex flex-wrap items-center gap-8px">
+    <NButton
+      v-for="button in buttons"
+      :key="button.id"
+      size="small"
+      ghost
+      type="primary"
+      :disabled="disabled(button)"
+      @click="emit('select', button)"
+    >
+      <template v-if="button.icon" #icon>
+        <SvgIcon :icon="button.icon" />
+      </template>
+      {{ getButtonLabel(button) }}
+    </NButton>
+  </div>
 </template>
 
 <style scoped></style>

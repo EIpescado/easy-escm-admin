@@ -136,7 +136,8 @@ export function useManageTable<Row extends Record<string, any>>(options: UseMana
 
   /** reset only clears the conditions, keeping the custom sort, without sending a request */
   function handleReset() {
-    params.items = [];
+    // the fixed conditions (e.g. the parent id of a linked list) must survive a reset
+    params.items = buildItems();
     params.page = 1;
   }
 

@@ -53,7 +53,12 @@ export interface QueryField {
   label: string;
   /** Value widget type, defaults to `text` */
   valueType?: QueryFieldValueType;
-  /** Operator used when the user keeps the default; defaults by `valueType` */
+  /**
+   * Operator used when the user keeps the default
+   *
+   * Defaults to the first operator of {@link QueryField.types} (or of the list derived from
+   * {@link QueryField.valueType}), so it only needs to be set to deviate from that.
+   */
   defaultType?: QueryOperator;
   /** Restrict the selectable operators; defaults by `valueType` */
   types?: QueryOperator[];
@@ -97,7 +102,13 @@ export interface QuerySortItem {
   asc: boolean;
 }
 
-const TEXT_OPERATORS: QueryOperator[] = ['eq', 'ne', 'like', 'notLike', 'in', 'notIn'];
+/**
+ * Operators offered per value type
+ *
+ * The first one of each list is the default of a field that does not set `defaultType`, so a plain
+ * text field defaults to a `like` (contains) search.
+ */
+const TEXT_OPERATORS: QueryOperator[] = ['like', 'eq', 'ne', 'notLike', 'in', 'notIn'];
 const NUMBER_OPERATORS: QueryOperator[] = ['eq', 'ne', 'gt', 'ge', 'lt', 'le', 'between', 'in', 'notIn'];
 const DATE_OPERATORS: QueryOperator[] = ['eq', 'ne', 'gt', 'ge', 'lt', 'le', 'between'];
 const SELECT_OPERATORS: QueryOperator[] = ['eq', 'ne', 'in', 'notIn'];
@@ -155,8 +166,7 @@ export function buildFieldSlots(fields: QueryField[]): QueryFieldSlot[] {
         valueType: 'text',
         label: $t('queryFilter.keyword'),
         placeholder: [first, ...rest].map(field => field.label).join(FAST_FIELD_SEPARATOR),
-        types: ['like'],
-        defaultType: 'like'
+        types: ['like']
       },
       fastProps: fastFields.map(field => field.prop)
     },
@@ -164,15 +174,22 @@ export function buildFieldSlots(fields: QueryField[]): QueryFieldSlot[] {
   ];
 }
 
-/** Get the default operator of a field (used by quick query when the user keeps the default) */
+/**
+ * Get the default operator of a field
+ *
+ * Falls back to the first operator the field offers, so a field only sets `defaultType` to deviate
+ * from it and most definitions leave it out.
+ */
 export function getDefaultOperator(field?: QueryField | null): QueryOperator {
   if (!field) return 'eq';
 
-  if (field.defaultType && getFieldOperators(field).includes(field.defaultType)) {
+  const operators = getFieldOperators(field);
+
+  if (field.defaultType && operators.includes(field.defaultType)) {
     return field.defaultType;
   }
 
-  return field.valueType === 'text' ? 'like' : 'eq';
+  return operators[0] ?? 'eq';
 }
 
 /** Get how many values an operator consumes */
