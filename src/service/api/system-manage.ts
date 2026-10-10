@@ -284,7 +284,22 @@ export function fetchUserDictDetail(userId: string) {
   });
 }
 
-/** bind dictionaries to a user (overrides the previous relation) */
-export function fetchBindUserDict(data: Api.SystemManage.UserDictForm) {
-  return request<string>({ url: '/system/dict/bindUserDict', method: 'post', data });
+/** add dictionaries to a user (already bound ones are ignored by the backend) */
+export function fetchAddUserDict(data: Api.SystemManage.UserDictForm) {
+  return request<string>({ url: '/system/dict/addUserDict', method: 'post', data });
+}
+
+/** remove dictionaries from a user */
+export function fetchRemoveUserDict(data: Api.SystemManage.UserDictForm) {
+  return request<string>({ url: '/system/dict/removeUserDict', method: 'post', data });
+}
+
+/** grant every dictionary to a user (drops the explicit relations first) */
+export function fetchBindUserAllDict(data: Api.SystemManage.UserDictForm) {
+  return request<string>({ url: '/system/dict/bindUserAllDict', method: 'post', data });
+}
+
+/** revoke the all-dictionaries grant of a user */
+export function fetchRemoveUserAllDict(data: Api.SystemManage.UserDictForm) {
+  return request<string>({ url: '/system/dict/removeUserAllDict', method: 'post', data });
 }

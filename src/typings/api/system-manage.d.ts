@@ -325,8 +325,8 @@ declare namespace Api {
       userId: string;
       /** whether the user owns all dictionaries */
       allDict?: boolean;
-      /** dictionaries owned by the user */
-      dictIds: Dict[];
+      /** dictionaries owned by the user (the backend field is `dictList`) */
+      dictList: Dict[];
     }
 
     /** user-dictionary bind form, aligned with backend SystemUserDictFo */

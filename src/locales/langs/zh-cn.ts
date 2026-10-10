@@ -11,6 +11,12 @@ const local: App.I18n.Schema = {
     role: {
       bindMenu: '分配权限'
     },
+    dict: {
+      addUserDict: '添加用户字典',
+      removeUserDict: '移除用户字典',
+      bindUserAllDict: '绑定全部字典',
+      removeUserAllDict: '解绑全部字典'
+    },
     menu: {
       createSubMenu: '新增子菜单',
       createTopMenu: '新增顶级菜单',
@@ -18,6 +24,7 @@ const local: App.I18n.Schema = {
     },
     button: {
       create: '新增按钮',
+      copy: '复制按钮',
       edit: '编辑按钮'
     }
   },
@@ -434,7 +441,9 @@ const local: App.I18n.Schema = {
         allDict: '全部字典',
         ownedDict: '拥有字典',
         selectUser: '请在左侧选择用户',
-        selectDict: '请在左侧选择字典'
+        selectDict: '请在左侧选择字典',
+        searchDict: '请输入字典编码或名称',
+        checkDict: '请先勾选要移除的字典'
       }
     },
     home: {

@@ -323,6 +323,12 @@ declare namespace App {
         role: {
           bindMenu: string;
         };
+        dict: {
+          addUserDict: string;
+          removeUserDict: string;
+          bindUserAllDict: string;
+          removeUserAllDict: string;
+        };
         menu: {
           createSubMenu: string;
           createTopMenu: string;
@@ -330,6 +336,7 @@ declare namespace App {
         };
         button: {
           create: string;
+          copy: string;
           edit: string;
         };
       };
@@ -681,6 +688,8 @@ declare namespace App {
             ownedDict: string;
             selectUser: string;
             selectDict: string;
+            searchDict: string;
+            checkDict: string;
           };
         };
         home: {

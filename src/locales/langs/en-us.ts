@@ -11,6 +11,12 @@ const local: App.I18n.Schema = {
     role: {
       bindMenu: 'Assign Permissions'
     },
+    dict: {
+      addUserDict: 'Add User Dictionary',
+      removeUserDict: 'Remove User Dictionary',
+      bindUserAllDict: 'Bind All Dictionaries',
+      removeUserAllDict: 'Unbind All Dictionaries'
+    },
     menu: {
       createSubMenu: 'Create Submenu',
       createTopMenu: 'Create Top Menu',
@@ -18,6 +24,7 @@ const local: App.I18n.Schema = {
     },
     button: {
       create: 'Create Button',
+      copy: 'Copy Button',
       edit: 'Edit Button'
     }
   },
@@ -438,7 +445,9 @@ const local: App.I18n.Schema = {
         allDict: 'All Dictionaries',
         ownedDict: 'Owned Dictionaries',
         selectUser: 'Select a user on the left',
-        selectDict: 'Select a dictionary on the left'
+        selectDict: 'Select a dictionary on the left',
+        searchDict: 'Type a dictionary code or name',
+        checkDict: 'Check the dictionaries to remove first'
       }
     },
     home: {
