@@ -2,14 +2,8 @@
 import { computed, h, ref, watch } from 'vue';
 import { NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
-import { useManageTable } from '@/hooks/business/manage-table';
 import { FORM_DETAIL_LOAD_DELAY, sleep } from '@/hooks/common/form';
-import {
-  getButtonLabel,
-  usePageButtonState,
-  usePageButtons,
-  type PageButtonStateRules
-} from '@/hooks/business/page-buttons';
+import { usePageButtons, type PageButtonStateRules } from '@/hooks/business/page-buttons';
 import {
   fetchDictDetail,
   fetchDictEntryDetail,
@@ -20,10 +14,8 @@ import {
 } from '@/service/api';
 import { enableStateOptions } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
-import { getTableOperateColumnWidth } from '@/utils/table';
 import { $t } from '@/locales';
-import QueryFilter from '@/components/advanced/query-filter/index.vue';
-import TableRowOperation from '@/components/advanced/table-row-operation.vue';
+import ManageList from '@/components/advanced/manage-list.vue';
 import type { QueryField } from '@/components/advanced/query-filter/types';
 import DictOperateModal from './modules/dict-operate-modal.vue';
 import DictEntryOperateModal from './modules/dict-entry-operate-modal.vue';
@@ -38,7 +30,14 @@ function isEnabled(stateEnum?: string) {
 }
 
 /** Buttons of the current route, provided by the backend menu tree */
-const { toolbarButtons, rowButtons, leftTopButtons, leftRowButtons } = usePageButtons();
+const { leftTopButtons, leftRowButtons } = usePageButtons();
+
+/** the list exposes `getData` / `reload` and the loaded rows to the page */
+interface ManageListInstance<Row> {
+  getData: () => Promise<void>;
+  reload: () => Promise<void>;
+  data: Row[];
+}
 
 /** ---------------- dict main list ---------------- */
 
@@ -59,7 +58,6 @@ const dictSearchFields = computed<QueryField[]>(() => [
     prop: 'state',
     label: $t('page.manage.dict.stateLabel'),
     valueType: 'select',
-    defaultType: 'eq',
     types: ['eq', 'ne'],
     options: translateOptions(enableStateOptions)
   }
@@ -72,105 +70,74 @@ const dictButtonRules: PageButtonStateRules<Api.SystemManage.Dict> = {
   edit: ({ rows }) => rows.length !== 1
 };
 
-const { isDisabled: isDictButtonDisabled } = usePageButtonState(dictButtonRules);
+/** Data columns of the dictionary list; the operate column is added by the list */
+const dictColumns = computed<NaiveUI.TableColumn<Api.SystemManage.Dict>[]>(() => [
+  {
+    key: 'code',
+    title: $t('page.manage.dict.code'),
+    minWidth: 160,
+    ellipsis: { tooltip: true }
+  },
+  {
+    key: 'name',
+    title: $t('page.manage.dict.name'),
+    minWidth: 160,
+    ellipsis: { tooltip: true }
+  },
+  {
+    key: 'state',
+    title: $t('page.manage.dict.stateLabel'),
+    align: 'center',
+    width: 90,
+    render: (row: Api.SystemManage.Dict) =>
+      h(
+        NTag,
+        { type: isEnabled(row.stateEnum) ? 'success' : 'error', size: 'small', bordered: false },
+        { default: () => $t(isEnabled(row.stateEnum) ? 'page.manage.dict.enabled' : 'page.manage.dict.disabled') }
+      )
+  },
+  {
+    key: 'whetherAuth',
+    title: $t('page.manage.dict.whetherAuth'),
+    align: 'center',
+    width: 100,
+    render: (row: Api.SystemManage.Dict) =>
+      h(
+        NTag,
+        { type: row.whetherAuth ? 'warning' : 'default', size: 'small', bordered: false },
+        { default: () => $t(row.whetherAuth ? 'common.yesOrNo.yes' : 'common.yesOrNo.no') }
+      )
+  },
+  {
+    key: 'remark',
+    title: $t('page.manage.dict.remark'),
+    minWidth: 160,
+    ellipsis: { tooltip: true }
+  }
+]);
 
-const dictOperateWidth = computed(() =>
-  getTableOperateColumnWidth(rowButtons.value.map(button => getButtonLabel(button)))
-);
-
-function getDictOperateOptions(row: Api.SystemManage.Dict) {
-  return rowButtons.value.map(button => ({
-    key: button.click ?? button.name,
-    label: getButtonLabel(button),
-    disabled: isDictButtonDisabled(button.click, [row], 'row'),
-    icon: button.icon || undefined
-  }));
+/** the list takes the columns as a factory, they follow the locale */
+function getDictColumns() {
+  return dictColumns.value;
 }
 
-const {
-  conditions: dictConditions,
-  columns: dictColumns,
-  data: dictData,
-  loading: dictLoading,
-  getData: getDictData,
-  mobilePagination: dictPagination,
-  scrollX: dictScrollX,
-  handleSearch: handleDictSearch,
-  handleReset: handleDictReset
-} = useManageTable({
-  tableKey: 'manage_dict',
-  api: fetchDictSearch,
-  columns: () => {
-    const columns: NaiveUI.TableColumn<Api.SystemManage.Dict>[] = [];
+const dictListRef = ref<ManageListInstance<Api.SystemManage.Dict> | null>(null);
 
-    if (rowButtons.value.length) {
-      columns.push({
-        key: 'operate',
-        title: $t('common.operate'),
-        align: 'center',
-        width: dictOperateWidth.value,
-        render: (row: Api.SystemManage.Dict) =>
-          h(TableRowOperation, {
-            options: getDictOperateOptions(row),
-            onSelect: (key: string) => handleDictRowAction(row, key)
-          })
-      });
-    }
-
-    columns.push(
-      {
-        key: 'code',
-        title: $t('page.manage.dict.code'),
-        minWidth: 160,
-        ellipsis: { tooltip: true }
-      },
-      {
-        key: 'name',
-        title: $t('page.manage.dict.name'),
-        minWidth: 160,
-        ellipsis: { tooltip: true }
-      },
-      {
-        key: 'state',
-        title: $t('page.manage.dict.stateLabel'),
-        align: 'center',
-        width: 90,
-        render: (row: Api.SystemManage.Dict) =>
-          h(
-            NTag,
-            { type: isEnabled(row.stateEnum) ? 'success' : 'error', size: 'small', bordered: false },
-            { default: () => $t(isEnabled(row.stateEnum) ? 'page.manage.dict.enabled' : 'page.manage.dict.disabled') }
-          )
-      },
-      {
-        key: 'whetherAuth',
-        title: $t('page.manage.dict.whetherAuth'),
-        align: 'center',
-        width: 100,
-        render: (row: Api.SystemManage.Dict) =>
-          h(
-            NTag,
-            { type: row.whetherAuth ? 'warning' : 'default', size: 'small', bordered: false },
-            { default: () => $t(row.whetherAuth ? 'common.yesOrNo.yes' : 'common.yesOrNo.no') }
-          )
-      },
-      {
-        key: 'remark',
-        title: $t('page.manage.dict.remark'),
-        minWidth: 160,
-        ellipsis: { tooltip: true }
-      }
-    );
-
-    return columns;
-  }
-});
+/** rows currently loaded in the dictionary list */
+const dictRows = computed(() => dictListRef.value?.data ?? []);
 
 /** ---------------- dict entry list ---------------- */
 
 /** selected dictionary (from the dict list), used to filter the entries list */
 const activeDictId = ref('');
-const activeDictName = computed(() => dictData.value.find(row => row.id === activeDictId.value)?.name ?? '');
+const activeDictName = ref('');
+
+/** the entries panel title, it follows the selected dictionary */
+const entryTitle = computed(() =>
+  activeDictId.value
+    ? `${$t('page.manage.dict.entry.title')} · ${activeDictName.value}`
+    : $t('page.manage.dict.entry.title')
+);
 
 function dictRowClassName(row: Api.SystemManage.Dict) {
   return row.id === activeDictId.value ? 'dict-row--active' : '';
@@ -201,7 +168,6 @@ const entrySearchFields = computed<QueryField[]>(() => [
     prop: 'state',
     label: $t('page.manage.dict.stateLabel'),
     valueType: 'select',
-    defaultType: 'eq',
     types: ['eq', 'ne'],
     options: translateOptions(enableStateOptions)
   }
@@ -211,123 +177,85 @@ const entryButtonRules: PageButtonStateRules<Api.SystemManage.DictEntry> = {
   enable: ({ rows }) => rows.every(row => isEnabled(row.stateEnum)),
   disable: ({ rows }) => rows.every(row => !isEnabled(row.stateEnum)),
   update: ({ rows }) => rows.length !== 1,
-  edit: ({ rows }) => rows.length !== 1
+  edit: ({ rows }) => rows.length !== 1,
+  // creating an entry needs a selected dictionary
+  create: () => !activeDictId.value,
+  add: () => !activeDictId.value
 };
 
-const { isDisabled: isEntryButtonDisabled } = usePageButtonState(entryButtonRules);
+/** the entries list is tied to the selected dictionary, never search it without one */
+function canSearchEntries() {
+  if (activeDictId.value) return true;
 
-const entryOperateWidth = computed(() =>
-  getTableOperateColumnWidth(leftRowButtons.value.map(button => getButtonLabel(button)))
-);
+  window.$message?.warning($t('page.manage.dict.selectDict'));
 
-function getEntryOperateOptions(row: Api.SystemManage.DictEntry) {
-  return leftRowButtons.value.map(button => ({
-    key: button.click ?? button.name,
-    label: getButtonLabel(button),
-    disabled: isEntryButtonDisabled(button.click, [row], 'left-row'),
-    icon: button.icon || undefined
-  }));
+  return false;
 }
 
-const {
-  conditions: entryConditions,
-  columns: entryColumns,
-  data: entryData,
-  loading: entryLoading,
-  getData: getEntryData,
-  getDataByPage: getEntryDataByPage,
-  mobilePagination: entryPagination,
-  scrollX: entryScrollX,
-  params: entryParams,
-  buildItems: buildEntryItems,
-  handleSearch: searchEntries
-} = useManageTable({
-  tableKey: 'manage_dict_entry',
-  // the entries list is linked to the selected dictionary, so do not fetch on mount
-  immediate: false,
-  api: fetchDictEntrySearch,
-  // the entries of the dictionary selected on the left
-  extraItems: () => (activeDictId.value ? [{ prop: 'pid', values: [activeDictId.value], type: 'eq' as const }] : []),
-  columns: () => {
-    const columns: NaiveUI.TableColumn<Api.SystemManage.DictEntry>[] = [];
+/** the entries of the dictionary selected on the left */
+function entryExtraItems(): Api.SystemManage.QueryItem[] {
+  return activeDictId.value ? [{ prop: 'pid', values: [activeDictId.value], type: 'eq' }] : [];
+}
 
-    if (leftRowButtons.value.length) {
-      columns.push({
-        key: 'operate',
-        title: $t('common.operate'),
-        align: 'center',
-        width: entryOperateWidth.value,
-        render: (row: Api.SystemManage.DictEntry) =>
-          h(TableRowOperation, {
-            options: getEntryOperateOptions(row),
-            onSelect: (key: string) => handleEntryRowAction(row, key)
-          })
-      });
-    }
-
-    columns.push(
-      {
-        key: 'code',
-        title: $t('page.manage.dict.entry.code'),
-        minWidth: 140,
-        ellipsis: { tooltip: true }
-      },
-      {
-        key: 'val',
-        title: $t('page.manage.dict.entry.val'),
-        minWidth: 120,
-        ellipsis: { tooltip: true }
-      },
-      {
-        key: 'val2',
-        title: $t('page.manage.dict.entry.val2'),
-        minWidth: 110,
-        ellipsis: { tooltip: true }
-      },
-      {
-        key: 'val3',
-        title: $t('page.manage.dict.entry.val3'),
-        minWidth: 110,
-        ellipsis: { tooltip: true }
-      },
-      {
-        key: 'val4',
-        title: $t('page.manage.dict.entry.val4'),
-        minWidth: 110,
-        ellipsis: { tooltip: true }
-      },
-      { key: 'sn', title: $t('page.manage.dict.entry.sn'), align: 'center', width: 80 },
-      {
-        key: 'state',
-        title: $t('page.manage.dict.stateLabel'),
-        align: 'center',
-        width: 90,
-        render: (row: Api.SystemManage.DictEntry) =>
-          h(
-            NTag,
-            { type: isEnabled(row.stateEnum) ? 'success' : 'error', size: 'small', bordered: false },
-            { default: () => $t(isEnabled(row.stateEnum) ? 'page.manage.dict.enabled' : 'page.manage.dict.disabled') }
-          )
-      },
-      {
-        key: 'remark',
-        title: $t('page.manage.dict.entry.remark'),
-        minWidth: 140,
-        ellipsis: { tooltip: true }
-      }
-    );
-
-    return columns;
+/** Data columns of the entries list; the operate column is added by the list */
+const entryColumns = computed<NaiveUI.TableColumn<Api.SystemManage.DictEntry>[]>(() => [
+  {
+    key: 'code',
+    title: $t('page.manage.dict.entry.code'),
+    minWidth: 140,
+    ellipsis: { tooltip: true }
+  },
+  {
+    key: 'val',
+    title: $t('page.manage.dict.entry.val'),
+    minWidth: 120,
+    ellipsis: { tooltip: true }
+  },
+  {
+    key: 'val2',
+    title: $t('page.manage.dict.entry.val2'),
+    minWidth: 110,
+    ellipsis: { tooltip: true }
+  },
+  {
+    key: 'val3',
+    title: $t('page.manage.dict.entry.val3'),
+    minWidth: 110,
+    ellipsis: { tooltip: true }
+  },
+  {
+    key: 'val4',
+    title: $t('page.manage.dict.entry.val4'),
+    minWidth: 110,
+    ellipsis: { tooltip: true }
+  },
+  { key: 'sn', title: $t('page.manage.dict.entry.sn'), align: 'center', width: 80 },
+  {
+    key: 'state',
+    title: $t('page.manage.dict.stateLabel'),
+    align: 'center',
+    width: 90,
+    render: (row: Api.SystemManage.DictEntry) =>
+      h(
+        NTag,
+        { type: isEnabled(row.stateEnum) ? 'success' : 'error', size: 'small', bordered: false },
+        { default: () => $t(isEnabled(row.stateEnum) ? 'page.manage.dict.enabled' : 'page.manage.dict.disabled') }
+      )
+  },
+  {
+    key: 'remark',
+    title: $t('page.manage.dict.entry.remark'),
+    minWidth: 140,
+    ellipsis: { tooltip: true }
   }
-});
+]);
 
-/**
- * The entries list belongs to the selected dictionary, so its pagination stays inert (no page change,
- * hence no request) until a dictionary is picked on the left.
- */
-const entryTablePagination = computed(() => ({ ...entryPagination.value, disabled: !activeDictId.value }));
+/** the list takes the columns as a factory, they follow the locale */
+function getEntryColumns() {
+  return entryColumns.value;
+}
 
-/** ---------------- modals & actions ---------------- */
+const entryListRef = ref<ManageListInstance<Api.SystemManage.DictEntry> | null>(null);
 
 const { bool: dictModalVisible, setTrue: openDictModal, setFalse: closeDictModal } = useBoolean();
 const dictOperateType = ref<NaiveUI.TableOperateType>('add');
@@ -378,7 +306,7 @@ function handleDictSetState(row: Api.SystemManage.Dict, enable: boolean) {
 
       if (!error) {
         window.$message?.success($t('common.updateSuccess'));
-        await getDictData();
+        await dictListRef.value?.getData();
       }
     }
   });
@@ -443,7 +371,7 @@ function handleEntrySetState(row: Api.SystemManage.DictEntry, enable: boolean) {
 
       if (!error) {
         window.$message?.success($t('common.updateSuccess'));
-        await getEntryData();
+        await entryListRef.value?.getData();
       }
     }
   });
@@ -471,135 +399,73 @@ function handleEntryToolbarAction(button: Api.SystemManage.ButtonNode) {
   else window.$message?.info($t('common.lookForward'));
 }
 
-/** Entry toolbar actions that create an entry, they need a selected dictionary */
-const ENTRY_CREATE_ACTIONS = ['create', 'add'];
-
-/** Creating an entry requires a selected dictionary, the other actions do not */
-function isEntryToolbarButtonDisabled(button: Api.SystemManage.ButtonNode) {
-  return !activeDictId.value && ENTRY_CREATE_ACTIONS.includes(button.click ?? '');
-}
-
 /** select a dictionary and refresh the linked entries list */
 async function selectDict(row: Api.SystemManage.Dict) {
   activeDictId.value = row.id;
-  entryParams.page = 1;
-  entryParams.items = buildEntryItems();
+  activeDictName.value = row.name;
 
-  await getEntryDataByPage(1);
+  await entryListRef.value?.reload();
 }
 
 /** clear the link when the selected dictionary is no longer in the list */
-watch(dictData, rows => {
+watch(dictRows, rows => {
   if (!rows.some(row => row.id === activeDictId.value)) {
     activeDictId.value = '';
-    entryParams.items = buildEntryItems();
+    activeDictName.value = '';
   }
 });
 
-/** the entries list is tied to the selected dictionary, never query it without one */
-function handleEntrySearch() {
-  if (!activeDictId.value) {
-    window.$message?.warning($t('page.manage.dict.selectDict'));
-
-    return;
-  }
-
-  searchEntries();
-}
-
-function handleEntryReset() {
-  entryParams.items = buildEntryItems();
-  entryParams.page = 1;
-}
 async function handleDictSubmitted() {
   closeDictModal();
   // only the list has to be refreshed here: the entry form select reloads when that form opens
-  await getDictData();
+  await dictListRef.value?.getData();
 
   // if a dictionary is selected on the right, reload its entries once (the change may affect them)
   if (activeDictId.value) {
-    await getEntryData();
+    await entryListRef.value?.getData();
   }
 }
 
 async function handleEntrySubmitted() {
   closeEntryModal();
-  await getEntryData();
+  await entryListRef.value?.getData();
 }
 </script>
 
 <template>
   <div class="min-h-0 flex flex-1 gap-16px overflow-hidden">
-    <div class="min-w-0 min-h-0 flex flex-[5] flex-col gap-16px overflow-hidden">
-      <QueryFilter
-        v-model="dictConditions"
-        :fields="dictSearchFields"
-        class="shrink-0"
-        @search="handleDictSearch"
-        @reset="handleDictReset"
-      />
-      <NCard :bordered="false" size="small" class="min-h-0 flex-1 card-wrapper">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <span>{{ $t('route.manage_dict') }}</span>
-            <TableToolbarButtons :buttons="toolbarButtons" @select="handleDictToolbarAction" />
-          </div>
-        </template>
-        <NDataTable
-          :columns="dictColumns"
-          :data="dictData"
-          :loading="dictLoading"
-          :row-key="row => row.id"
-          :row-class-name="dictRowClassName"
-          :row-props="dictRowProps"
-          :pagination="dictPagination"
-          :paginate-single-page="true"
-          :scroll-x="dictScrollX"
-          remote
-          flex-height
-          class="h-full"
-        />
-      </NCard>
-    </div>
-    <div class="min-w-0 min-h-0 flex flex-[5] flex-col gap-16px overflow-hidden">
-      <QueryFilter
-        v-model="entryConditions"
-        :fields="entrySearchFields"
-        class="shrink-0"
-        @search="handleEntrySearch"
-        @reset="handleEntryReset"
-      />
-      <NCard :bordered="false" size="small" class="min-h-0 flex-1 card-wrapper">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <span class="truncate">
-              {{
-                activeDictId
-                  ? `${$t('page.manage.dict.entry.title')} · ${activeDictName}`
-                  : $t('page.manage.dict.entry.title')
-              }}
-            </span>
-            <TableToolbarButtons
-              :buttons="leftTopButtons"
-              :disabled="isEntryToolbarButtonDisabled"
-              @select="handleEntryToolbarAction"
-            />
-          </div>
-        </template>
-        <NDataTable
-          :columns="entryColumns"
-          :data="entryData"
-          :loading="entryLoading"
-          :row-key="row => row.id"
-          :pagination="entryTablePagination"
-          :paginate-single-page="true"
-          :scroll-x="entryScrollX"
-          remote
-          flex-height
-          class="h-full"
-        />
-      </NCard>
-    </div>
+    <ManageList
+      ref="dictListRef"
+      table-key="manage_dict"
+      :title="$t('route.manage_dict')"
+      class="min-w-0 min-h-0 flex-[5]"
+      :api="fetchDictSearch"
+      :fields="dictSearchFields"
+      :columns="getDictColumns"
+      :button-rules="dictButtonRules"
+      :row-class-name="dictRowClassName"
+      :row-props="dictRowProps"
+      :row-action="handleDictRowAction"
+      @toolbar-action="handleDictToolbarAction"
+    />
+    <ManageList
+      ref="entryListRef"
+      table-key="manage_dict_entry"
+      :title="entryTitle"
+      class="min-w-0 min-h-0 flex-[5]"
+      :api="fetchDictEntrySearch"
+      :immediate="false"
+      :extra-items="entryExtraItems"
+      :before-search="canSearchEntries"
+      :pagination-disabled="!activeDictId"
+      :buttons="leftTopButtons"
+      :operate-buttons="leftRowButtons"
+      :fields="entrySearchFields"
+      :columns="getEntryColumns"
+      :button-rules="entryButtonRules"
+      :row-action="handleEntryRowAction"
+      @toolbar-action="handleEntryToolbarAction"
+    />
     <DictOperateModal
       v-model:visible="dictModalVisible"
       :operate-type="dictOperateType"

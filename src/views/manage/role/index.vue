@@ -2,14 +2,8 @@
 import { computed, h, onBeforeUnmount, ref, watch, type VNode } from 'vue';
 import type { TreeOption } from 'naive-ui';
 import { NTag } from 'naive-ui';
-import { useTableOperate } from '@/hooks/common/table';
-import { useManageTable } from '@/hooks/business/manage-table';
-import {
-  getButtonLabel,
-  usePageButtonState,
-  usePageButtons,
-  type PageButtonStateRules
-} from '@/hooks/business/page-buttons';
+import { useBoolean } from '@sa/hooks';
+import { usePageButtons, type PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { useSvgIcon } from '@/hooks/common/icon';
 import {
   fetchBindRoleMenu,
@@ -28,11 +22,8 @@ import {
   MENU_TYPE_TAG_TYPES,
   type MenuNodeType
 } from '@/utils/menu';
-import { getTableOperateColumnWidth } from '@/utils/table';
 import { $t } from '@/locales';
-import TableRowOperation from '@/components/advanced/table-row-operation.vue';
-import TableExportButton from '@/components/advanced/table-export-button.vue';
-import QueryFilter from '@/components/advanced/query-filter/index.vue';
+import ManageList from '@/components/advanced/manage-list.vue';
 import type { QueryField } from '@/components/advanced/query-filter/types';
 import RoleOperateModal from './modules/role-operate-modal.vue';
 
@@ -41,32 +32,20 @@ defineOptions({
 });
 
 const searchFields = computed<QueryField[]>(() => [
-  {
-    prop: 'roleCode',
-    label: $t('page.manage.role.roleCode'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like']
-  },
-  {
-    prop: 'roleName',
-    label: $t('page.manage.role.roleName'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like']
-  },
+  // the two identifying fields are merged into one keyword condition, OR-ed by the backend (`fast`)
+  { prop: 'roleCode', label: $t('page.manage.role.roleCode'), fast: true },
+  { prop: 'roleName', label: $t('page.manage.role.roleName'), fast: true },
   {
     prop: 'state',
     label: $t('page.manage.role.stateLabel'),
     valueType: 'select',
-    defaultType: 'eq',
     types: ['eq'],
     options: translateOptions(roleStateOptions)
   }
 ]);
 
-/** Buttons of the current route, provided by the backend menu tree */
-const { toolbarButtons, rowButtons, leftTopButtons } = usePageButtons();
+/** Right-hand panel buttons of the current route (position `left-top`) */
+const { leftTopButtons } = usePageButtons();
 
 /**
  * Button state rules, keyed by the backend button `click` code.
@@ -80,112 +59,55 @@ const buttonStateRules: PageButtonStateRules<Api.SystemManage.Role> = {
   update: ({ rows }) => rows.length !== 1
 };
 
-const { isDisabled: isButtonDisabled } = usePageButtonState(buttonStateRules);
-
-/** Row action buttons (position `row`), e.g. edit / menu auth */
-function getOperateOptions(row: Api.SystemManage.Role) {
-  return rowButtons.value.map(button => ({
-    key: button.click ?? button.name,
-    label: getButtonLabel(button),
-    disabled: isButtonDisabled(button.click, [row], 'row'),
-    icon: button.icon || undefined
-  }));
-}
-
-const operateColumnWidth = computed(() => getTableOperateColumnWidth(rowButtons.value.map(button => button.name)));
-
-const {
-  conditions: searchConditions,
-  columns,
-  columnChecks,
-  data,
-  loading,
-  getData,
-  scrollX,
-  tablePagination,
-  exportItems,
-  params,
-  handleSearch,
-  handleReset
-} = useManageTable({
-  tableKey: 'manage_role',
-  api: fetchRoleList,
-  sortable: true,
-  columns: () => {
-    const tableColumns: NaiveUI.TableColumn<Api.SystemManage.Role>[] = [];
-
-    // hide the operate column when the route has no row buttons
-    if (rowButtons.value.length) {
-      tableColumns.push({
-        key: 'operate',
-        title: $t('common.operate'),
-        align: 'center',
-        width: operateColumnWidth.value,
-        render: (row: Api.SystemManage.Role) =>
-          h(TableRowOperation, {
-            options: getOperateOptions(row),
-            onSelect: (key: string) => handleRowAction(row, key)
-          })
-      });
-    }
-
-    tableColumns.push(
-      { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
-      { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
-      {
-        key: 'state',
-        title: $t('page.manage.role.stateLabel'),
-        align: 'center',
-        width: 100,
-        render: row =>
-          h(
-            NTag,
-            { type: row.stateEnum === 'ON' ? 'success' : 'error', size: 'small', bordered: false },
-            { default: () => $t(roleStateRecord[row.stateEnum]) }
-          )
-      },
-      { key: 'remark', title: $t('page.manage.role.remark'), align: 'center', minWidth: 160 }
-    );
-
-    return tableColumns;
-  }
-});
-
-// the operate column is driven by the backend row buttons; keep it visible and leftmost
-watch(
-  rowButtons,
-  () => {
-    const index = columnChecks.value.findIndex(check => check.key === 'operate');
-
-    if (index < 0) return;
-
-    const [operateCheck] = columnChecks.value.splice(index, 1);
-
-    operateCheck.checked = rowButtons.value.length > 0;
-    columnChecks.value.unshift(operateCheck);
+/** Data columns; the operate and the selection columns are added by the list */
+const columns = computed<NaiveUI.TableColumn<Api.SystemManage.Role>[]>(() => [
+  { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
+  { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
+  {
+    key: 'state',
+    title: $t('page.manage.role.stateLabel'),
+    align: 'center',
+    width: 100,
+    render: row =>
+      h(
+        NTag,
+        { type: row.stateEnum === 'ON' ? 'success' : 'error', size: 'small', bordered: false },
+        { default: () => $t(roleStateRecord[row.stateEnum]) }
+      )
   },
-  { immediate: true }
-);
+  { key: 'remark', title: $t('page.manage.role.remark'), align: 'center', minWidth: 160 }
+]);
 
-const { drawerVisible, openDrawer, closeDrawer, operateType, editingData, checkedRowKeys } = useTableOperate(
-  data,
-  'id',
-  getData
-);
-
-/** rows currently checked in the table, used by the toolbar button state rules */
-const selectedRows = computed(() => data.value.filter(row => checkedRowKeys.value.includes(row.id)));
-
-/** whether a toolbar button is disabled by its rules and the current selection */
-function isToolbarButtonDisabled(button: Api.SystemManage.ButtonNode) {
-  return isButtonDisabled(button.click, selectedRows.value, 'top');
+/** the list takes the columns as a factory, they follow the locale */
+function getColumns() {
+  return columns.value;
 }
 
+/** the list exposes `getData` and the loaded rows to the page */
+interface ManageListInstance {
+  getData: () => Promise<void>;
+  data: Api.SystemManage.Role[];
+}
+
+const listRef = ref<ManageListInstance | null>(null);
+
+/** rows currently loaded in the list */
+const rows = computed(() => listRef.value?.data ?? []);
+
+async function refreshList() {
+  await listRef.value?.getData();
+}
+
+const { bool: drawerVisible, setTrue: openDrawer, setFalse: closeDrawer } = useBoolean();
+const operateType = ref<NaiveUI.TableOperateType>('add');
+const editingData = ref<Api.SystemManage.Role | null>(null);
+
+/** the operate modal edits a `RoleForm` */
 const editRow = computed(() => editingData.value as unknown as Api.SystemManage.RoleForm | null);
 
 /** currently selected role (left list), drives the right-hand menu permission tree */
 const activeRoleId = ref('');
-const activeRoleName = computed(() => data.value.find(row => row.id === activeRoleId.value)?.roleName ?? '');
+const activeRoleName = ref('');
 
 /** whether the selected role's bound menus are being loaded into the tree */
 const menuLoading = ref(false);
@@ -300,6 +222,7 @@ async function loadRoleMenuIds(roleId: string) {
  */
 function selectRole(row: Api.SystemManage.Role) {
   activeRoleId.value = row.id;
+  activeRoleName.value = row.roleName;
   menuLoading.value = true;
 
   clearLoadMenuIdsTimer();
@@ -332,9 +255,9 @@ function rowProps(row: Api.SystemManage.Role) {
 
 /** clear the selection when the selected role is no longer in the list (e.g. after filtering / paging) */
 watch(
-  data,
-  rows => {
-    if (!rows.some(row => row.id === activeRoleId.value)) {
+  rows,
+  loaded => {
+    if (!loaded.some(row => row.id === activeRoleId.value)) {
       activeRoleId.value = '';
       checkedKeys.value = [];
       clearLoadMenuIdsTimer();
@@ -403,14 +326,10 @@ function handleAdd() {
   openDrawer();
 }
 
-function handleEdit(id: string) {
-  const row = data.value.find(item => item.id === id);
-
-  if (row) {
-    operateType.value = 'edit';
-    editingData.value = row as unknown as Api.SystemManage.Role;
-    openDrawer();
-  }
+function handleEdit(row: Api.SystemManage.Role) {
+  operateType.value = 'edit';
+  editingData.value = row;
+  openDrawer();
 }
 
 function handleSetState(row: Api.SystemManage.Role, enable: boolean) {
@@ -422,7 +341,7 @@ function handleSetState(row: Api.SystemManage.Role, enable: boolean) {
 
       if (!error) {
         window.$message?.success($t('common.updateSuccess'));
-        await getData();
+        await refreshList();
       }
     }
   });
@@ -430,7 +349,7 @@ function handleSetState(row: Api.SystemManage.Role, enable: boolean) {
 
 /** Row action handlers, dispatched by the backend button `click` */
 const rowActionHandlers: Record<string, (row: Api.SystemManage.Role) => void> = {
-  update: row => handleEdit(row.id),
+  update: handleEdit,
   enable: row => handleSetState(row, true),
   disable: row => handleSetState(row, false)
 };
@@ -447,7 +366,7 @@ function handleRowAction(row: Api.SystemManage.Role, key: string) {
 
 /** Toolbar buttons (position `top`), text comes from the backend button `name` */
 function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
-  const handlers: Record<string, () => void> = { create: handleAdd, search: handleSearch };
+  const handlers: Record<string, () => void> = { create: handleAdd };
 
   const handler = handlers[button.click ?? ''];
 
@@ -481,84 +400,58 @@ function isMenuAuthButtonDisabled() {
 
 async function handleSubmitted() {
   closeDrawer();
-  await getData();
+  await refreshList();
 }
 </script>
 
 <template>
-  <div class="min-h-0 flex flex-1 flex-col gap-16px overflow-hidden">
-    <QueryFilter
-      v-model="searchConditions"
+  <div class="min-h-0 flex flex-1 gap-16px overflow-hidden">
+    <ManageList
+      ref="listRef"
+      table-key="manage_role"
+      class="min-w-0 min-h-0 flex-[6]"
+      :api="fetchRoleList"
+      :export-api="fetchRoleExport"
       :fields="searchFields"
-      class="shrink-0"
-      @search="handleSearch"
-      @reset="handleReset"
+      :columns="getColumns"
+      :button-rules="buttonStateRules"
+      :row-class-name="rowClassName"
+      :row-props="rowProps"
+      :row-action="handleRowAction"
+      selection
+      sortable
+      @toolbar-action="handleToolbarAction"
     />
-    <div class="min-h-0 flex flex-1 gap-16px overflow-hidden">
-      <NCard :bordered="false" size="small" class="min-w-0 min-h-0 flex-[6] card-wrapper">
-        <template #header>
-          <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData">
-            <template #default>
-              <TableToolbarButtons
-                :buttons="toolbarButtons"
-                :disabled="isToolbarButtonDisabled"
-                @select="handleToolbarAction"
-              />
-            </template>
-            <template #export>
-              <TableExportButton :api="() => fetchRoleExport({ ...params, exportItems })" />
-            </template>
-          </TableHeaderOperation>
-        </template>
-        <NDataTable
-          v-model:checked-row-keys="checkedRowKeys"
-          :columns="columns"
-          :data="data"
-          :loading="loading"
-          :row-key="row => row.id"
-          :row-class-name="rowClassName"
-          :row-props="rowProps"
-          :pagination="tablePagination"
-          :paginate-single-page="true"
-          :scroll-x="scrollX"
-          remote
-          flex-height
-          class="h-full"
-        />
-      </NCard>
-      <NCard :bordered="false" size="small" class="menu-auth-card min-w-0 min-h-0 flex-[4] card-wrapper">
-        <template #header>
-          <div class="min-w-0 flex items-center justify-between gap-8px">
-            <span class="truncate">
-              {{
-                activeRoleId
-                  ? `${$t('page.manage.role.menuAuth')} · ${activeRoleName}`
-                  : $t('page.manage.role.menuAuth')
-              }}
-            </span>
-            <TableToolbarButtons
-              :buttons="leftTopButtons"
-              :disabled="isMenuAuthButtonDisabled"
-              @select="handleLeftTopAction"
-            />
-          </div>
-        </template>
-        <NSpin v-if="activeRoleId" :show="menuLoading" class="h-full min-h-0" content-class="h-full min-h-0">
-          <div class="h-full min-h-0 overflow-auto">
-            <NTree
-              v-model:checked-keys="checkedKeys"
-              :data="treeData"
-              :render-label="renderMenuNodeLabel"
-              :render-suffix="renderMenuNodeSuffix"
-              checkable
-              expand-on-click
-              block-line
-            />
-          </div>
-        </NSpin>
-        <NEmpty v-else class="mt-80px" :description="$t('page.manage.role.selectRole')" />
-      </NCard>
-    </div>
+    <NCard :bordered="false" size="small" class="menu-auth-card min-w-0 min-h-0 flex-[4] card-wrapper">
+      <template #header>
+        <div class="min-w-0 flex items-center justify-between gap-8px">
+          <span class="truncate">
+            {{
+              activeRoleId ? `${$t('page.manage.role.menuAuth')} · ${activeRoleName}` : $t('page.manage.role.menuAuth')
+            }}
+          </span>
+          <TableToolbarButtons
+            :buttons="leftTopButtons"
+            :disabled="isMenuAuthButtonDisabled"
+            @select="handleLeftTopAction"
+          />
+        </div>
+      </template>
+      <NSpin v-if="activeRoleId" :show="menuLoading" class="h-full min-h-0" content-class="h-full min-h-0">
+        <div class="h-full min-h-0 overflow-auto">
+          <NTree
+            v-model:checked-keys="checkedKeys"
+            :data="treeData"
+            :render-label="renderMenuNodeLabel"
+            :render-suffix="renderMenuNodeSuffix"
+            checkable
+            expand-on-click
+            block-line
+          />
+        </div>
+      </NSpin>
+      <NEmpty v-else class="mt-80px" :description="$t('page.manage.role.selectRole')" />
+    </NCard>
     <RoleOperateModal
       v-model:visible="drawerVisible"
       :operate-type="operateType"
@@ -569,12 +462,6 @@ async function handleSubmitted() {
 </template>
 
 <style scoped>
-:deep(.n-data-table-td) {
-  height: 48px !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
 /* the selected role row */
 :deep(.role-row--active .n-data-table-td) {
   background-color: var(--n-td-color-hover, rgba(0, 0, 0, 0.04));
