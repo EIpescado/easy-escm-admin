@@ -80,7 +80,6 @@ const searchFields = computed<QueryField[]>(() => [
     prop: 'type',
     label: $t('page.manage.menu.type'),
     valueType: 'select',
-    defaultType: 'eq',
     types: ['eq', 'ne'],
     options: [
       { label: $t('page.manage.menu.root'), value: 'root' },
@@ -93,7 +92,6 @@ const searchFields = computed<QueryField[]>(() => [
     prop: 'state',
     label: $t('page.manage.menu.status'),
     valueType: 'select',
-    defaultType: 'eq',
     types: ['eq', 'ne'],
     options: [
       { label: $t('page.manage.menu.enabled'), value: 'ON' },
@@ -255,6 +253,7 @@ const { toolbarButtons, rowButtons } = usePageButtons();
  * - `createButton`: only allowed under a menu
  * - `editMenu`: allowed under a directory or a menu
  * - `editButton`: only allowed under a button
+ * - `copy` / `copyButton`: only allowed on a button
  */
 const menuButtonStateRules: PageButtonStateRules<Api.SystemManage.MenuNode> = {
   enable: ({ rows }) => rows.every(row => isMenuEnabled(row)),
@@ -263,7 +262,10 @@ const menuButtonStateRules: PageButtonStateRules<Api.SystemManage.MenuNode> = {
   createSubMenu: ({ rows }) => rows.some(row => !['directory', 'root'].includes(getMenuNodeType(row))),
   createButton: ({ rows }) => rows.some(row => getMenuNodeType(row) !== 'menu'),
   editMenu: ({ rows }) => rows.some(row => getMenuNodeType(row) === 'button'),
-  editButton: ({ rows }) => rows.some(row => getMenuNodeType(row) !== 'button')
+  editButton: ({ rows }) => rows.some(row => getMenuNodeType(row) !== 'button'),
+  // the backend may send either the short `copy` or the explicit `copyButton`
+  copy: ({ rows }) => rows.some(row => getMenuNodeType(row) !== 'button'),
+  copyButton: ({ rows }) => rows.some(row => getMenuNodeType(row) !== 'button')
 };
 
 const { isDisabled: isButtonDisabled } = usePageButtonState(menuButtonStateRules);
@@ -276,63 +278,89 @@ const parentId = ref<string>(rootPid.value);
 const addButtonMode = ref(false);
 /** whether the add form is creating a top-level menu (platform root, `pid` empty and component `root`) */
 const addTopMenuMode = ref(false);
+/** whether the add form is a copy of an existing node, so submitting still creates a new one */
+const copying = ref(false);
+
+/** increments on every form open, dropping the detail response of a superseded open */
+let detailToken = 0;
+
+/** open the form, invalidating the detail request still in flight, if any */
+function openForm() {
+  detailToken += 1;
+  openModal();
+}
+
+/** reset the mode flags; every open path runs it so a pending copy cannot leak into another form */
+function resetFormMode() {
+  addButtonMode.value = false;
+  addTopMenuMode.value = false;
+  copying.value = false;
+  editingRow.value = null;
+}
+
+/** load a node detail into the already-open form, dropping stale responses */
+async function loadFormDetail(row: Api.SystemManage.MenuNode) {
+  const token = detailToken;
+  await sleep(FORM_DETAIL_LOAD_DELAY);
+
+  // aborted while waiting (dialog closed or another row selected)
+  if (token !== detailToken || !modalVisible.value) return;
+
+  const { data, error } = await (row.beButton ? fetchGetButtonDetail(row.id) : fetchGetMenuDetail(row.id));
+
+  // drop the response if the dialog changed while loading
+  if (token !== detailToken || !modalVisible.value) return;
+  if (error || !data) return;
+
+  editingRow.value = data;
+  parentId.value = data.pid;
+}
 
 function handleAdd(row?: Api.SystemManage.MenuNode) {
   operateType.value = 'add';
-  addButtonMode.value = false;
-  addTopMenuMode.value = false;
-  editingRow.value = null;
+  resetFormMode();
   parentId.value = row?.id ?? rootPid.value;
-  openModal();
+  openForm();
 }
 
 /** add a top-level menu: `pid` is empty and the component is fixed to `root` */
 function handleCreateTopMenu() {
   operateType.value = 'add';
-  addButtonMode.value = false;
+  resetFormMode();
   addTopMenuMode.value = true;
-  editingRow.value = null;
   parentId.value = '';
-  openModal();
+  openForm();
 }
 
 /** add a button under the given menu */
 function handleAddButton(row: Api.SystemManage.MenuNode) {
   operateType.value = 'add';
+  resetFormMode();
   addButtonMode.value = true;
-  addTopMenuMode.value = false;
-  editingRow.value = null;
   parentId.value = row.id;
-  openModal();
+  openForm();
 }
 
-/** increments on every edit to drop the response of a superseded request */
-let editDetailToken = 0;
-
-/** load the node detail from the backend after opening the edit form (which shows a skeleton first) */
+/** edit a node: open first so the dialog shows its skeleton, then load the detail into it */
 async function handleEdit(row: Api.SystemManage.MenuNode) {
   operateType.value = 'edit';
-  addButtonMode.value = false;
-  addTopMenuMode.value = false;
-  // open first so the dialog shows its skeleton, then load the detail
-  editingRow.value = null;
+  resetFormMode();
   parentId.value = row.pid;
-  openModal();
+  openForm();
 
-  const token = ++editDetailToken;
-  await sleep(FORM_DETAIL_LOAD_DELAY);
+  await loadFormDetail(row);
+}
 
-  // aborted while waiting (dialog closed or another row selected)
-  if (token !== editDetailToken || !modalVisible.value || operateType.value !== 'edit') return;
+/** copy a node: load it like an edit, but keep the add mode so submitting creates a new node */
+async function copyButton(row: Api.SystemManage.MenuNode) {
+  operateType.value = 'add';
+  resetFormMode();
+  addButtonMode.value = true;
+  copying.value = true;
+  parentId.value = row.pid;
+  openForm();
 
-  const { data, error } = await (row.beButton ? fetchGetButtonDetail(row.id) : fetchGetMenuDetail(row.id));
-
-  // drop the response if the dialog changed while loading
-  if (token !== editDetailToken || !modalVisible.value || operateType.value !== 'edit') return;
-  if (error || !data) return;
-
-  editingRow.value = data;
-  parentId.value = data.pid;
+  await loadFormDetail(row);
 }
 
 function handleDelete(row: Api.SystemManage.MenuNode) {
@@ -378,6 +406,9 @@ const rowActionHandlers: Record<string, (row: Api.SystemManage.MenuNode) => void
   create: row => handleAdd(row),
   createSubMenu: row => handleAdd(row),
   createButton: handleAddButton,
+  // the backend may send either the short `copy` or the explicit `copyButton`
+  copy: copyButton,
+  copyButton,
   update: handleEdit,
   edit: handleEdit,
   editMenu: handleEdit,
@@ -640,6 +671,7 @@ const scrollX = computed(() => getTableScrollX(columns.value));
       :operate-type="operateType"
       :row="editingRow"
       :add-button="addButtonMode"
+      :copying="copying"
       :add-top-menu="addTopMenuMode"
       :parent-id="parentId"
       :root-pid="rootPid"

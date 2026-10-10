@@ -14,6 +14,12 @@ interface Props {
   row: Api.SystemManage.MenuNode | null;
   /** force button mode when adding */
   addButton?: boolean;
+  /**
+   * Copy mode: the add form is preloaded with the node in `row`, which is fetched like an edit
+   *
+   * The submit still creates a new node, since `operateType` stays `add`.
+   */
+  copying?: boolean;
   /** add a top-level menu: `pid` empty and component fixed to `root` */
   addTopMenu?: boolean;
   parentId: string;
@@ -133,14 +139,15 @@ const roleOptions = ref<Api.SystemManage.Selector<string>[]>([]);
 
 const title = computed(() => {
   if (props.operateType === 'edit') return $t('common.edit');
+  if (props.copying) return $t('system.button.copy');
   if (props.addButton) return $t('system.button.create');
   if (props.addTopMenu) return $t('system.menu.createTopMenu');
 
   return $t('common.add');
 });
 
-/** show the skeleton until the edit detail is loaded into `row` */
-const loading = computed(() => props.operateType === 'edit' && !props.row);
+/** show the skeleton until the edit / copy detail is loaded into `row` */
+const loading = computed(() => (props.operateType === 'edit' || Boolean(props.copying)) && !props.row);
 
 /** parse the props key-value pairs into an object for the request */
 function parseMenuProps(): Record<string, unknown> | null {
