@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, watch } from 'vue';
-import { NEllipsis, NTag } from 'naive-ui';
-import { getTableScrollX, useNaivePaginatedTable } from '@/hooks/common/table';
+import { computed, h, ref, watch } from 'vue';
+import { NTag } from 'naive-ui';
+import { getTableScrollX } from '@/hooks/common/table';
+import { useManageTable } from '@/hooks/business/manage-table';
 import { usePageButtons } from '@/hooks/business/page-buttons';
 import { fetchBindUserDict, fetchDictSearch, fetchUserDictDetail, fetchUserList } from '@/service/api';
 import { userStateOptions, userStateRecord } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
 import QueryFilter from '@/components/advanced/query-filter/index.vue';
-import { toQueryItems, type QueryField, type QueryFilterCondition } from '@/components/advanced/query-filter/types';
+import type { QueryField } from '@/components/advanced/query-filter/types';
 
 defineOptions({
   name: 'ManageUserDict'
@@ -46,32 +47,22 @@ const searchFields = computed<QueryField[]>(() => [
   }
 ]);
 
-const searchConditions = ref<QueryFilterCondition[]>([]);
-
-const params = reactive<Api.SystemManage.PageQo>({
-  page: 1,
-  size: 10,
-  items: [],
-  orders: []
-});
-
 /** buttons of the current route, provided by the backend menu tree */
 const { leftTopButtons } = usePageButtons();
 
-const { columns, data, loading, getData, getDataByPage, mobilePagination, scrollX } = useNaivePaginatedTable({
+const {
+  conditions: searchConditions,
+  columns,
+  data,
+  loading,
+  getData,
+  mobilePagination,
+  scrollX,
+  handleSearch,
+  handleReset
+} = useManageTable({
   tableKey: 'manage_user_dict',
-  api: () => fetchUserList(params),
-  transform: response => {
-    const { data: resData, error } = response;
-
-    if (!error) {
-      const { rows, page, size, total } = resData;
-
-      return { data: rows || [], pageNum: page, pageSize: size, total };
-    }
-
-    return { data: [], pageNum: 1, pageSize: 10, total: 0 };
-  },
+  api: fetchUserList,
   columns: () => {
     const tableColumns: NaiveUI.TableColumn<Api.SystemManage.User>[] = [
       { key: 'username', title: $t('page.manage.user.username'), minWidth: 140 },
@@ -92,21 +83,12 @@ const { columns, data, loading, getData, getDataByPage, mobilePagination, scroll
     ];
 
     return tableColumns;
-  },
-  onPaginationParamsChange: paginationParams => {
-    params.page = paginationParams.page ?? 1;
-    params.size = paginationParams.pageSize ?? 10;
   }
 });
 
 /** selected user (left), drives the dictionaries panel */
 const activeUserId = ref('');
 const activeUserName = computed(() => data.value.find(row => row.id === activeUserId.value)?.username ?? '');
-
-/** keep a text column on a single line, showing a tooltip when it overflows */
-function renderEllipsis(text?: string | number | null) {
-  return h(NEllipsis, { tooltip: true }, { default: () => String(text ?? '') || '-' });
-}
 
 /** all dictionaries of the system, shown as a selectable list */
 const allDicts = ref<Api.SystemManage.Dict[]>([]);
@@ -119,9 +101,9 @@ const dictLoading = ref(false);
 /** dictionary columns: a selection column plus the dictionary fields */
 const dictColumns = computed<NaiveUI.TableColumn<Api.SystemManage.Dict>[]>(() => [
   { type: 'selection', disabled: () => allDict.value },
-  { key: 'code', title: $t('page.manage.dict.code'), minWidth: 120, render: row => renderEllipsis(row.code) },
-  { key: 'name', title: $t('page.manage.dict.name'), minWidth: 120, render: row => renderEllipsis(row.name) },
-  { key: 'remark', title: $t('page.manage.dict.remark'), minWidth: 120, render: row => renderEllipsis(row.remark) }
+  { key: 'code', title: $t('page.manage.dict.code'), minWidth: 120, ellipsis: { tooltip: true } },
+  { key: 'name', title: $t('page.manage.dict.name'), minWidth: 120, ellipsis: { tooltip: true } },
+  { key: 'remark', title: $t('page.manage.dict.remark'), minWidth: 120, ellipsis: { tooltip: true } }
 ]);
 
 /** total width of the dictionary columns, drives the horizontal scrollbar of the right table */
@@ -200,18 +182,6 @@ function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
   if (handler) handler();
   else window.$message?.info($t('common.lookForward'));
 }
-
-function handleSearch() {
-  params.items = toQueryItems(searchConditions.value);
-  params.page = 1;
-
-  getDataByPage(1);
-}
-
-function handleReset() {
-  params.items = [];
-  params.page = 1;
-}
 </script>
 
 <template>
@@ -224,7 +194,7 @@ function handleReset() {
       @reset="handleReset"
     />
     <div class="min-h-0 flex flex-1 gap-16px overflow-hidden">
-      <NCard :bordered="false" size="small" class="min-w-0 min-h-0 flex-[6] card-wrapper">
+      <NCard :bordered="false" size="small" class="min-w-0 min-h-0 flex-[5] card-wrapper">
         <template #header>
           <div class="flex items-center justify-between">
             <span>{{ $t('route.manage_user') }}</span>
@@ -251,7 +221,7 @@ function handleReset() {
           class="h-full"
         />
       </NCard>
-      <NCard :bordered="false" size="small" class="min-w-0 min-h-0 flex-[4] card-wrapper">
+      <NCard :bordered="false" size="small" class="min-w-0 min-h-0 flex-[5] card-wrapper">
         <template #header>
           <div class="min-w-0 flex items-center justify-between gap-8px">
             <span class="truncate">

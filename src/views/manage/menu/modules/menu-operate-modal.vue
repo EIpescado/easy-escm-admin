@@ -31,7 +31,7 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-const { formRef, validate, restoreValidation } = useNaiveForm();
+const { formRef, restoreValidation } = useNaiveForm();
 const { defaultRequiredRule } = useFormRules();
 
 type MenuMeta = Api.SystemManage.MenuMeta;
@@ -305,8 +305,6 @@ function buildButtonRequest(isAdd: boolean) {
 }
 
 async function handleSubmit() {
-  await validate();
-
   const isAdd = props.operateType === 'add';
   const { error } = await (model.beButton ? buildButtonRequest(isAdd) : buildMenuRequest(isAdd));
 
@@ -318,7 +316,16 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <FormDialog ref="formRef" v-model:visible="visible" :title="title" :loading="loading" :model="model" :rules="rules">
+  <FormDialog
+    ref="formRef"
+    v-model:visible="visible"
+    :title="title"
+    :loading="loading"
+    :model="model"
+    :rules="rules"
+    :skeleton-rows="13"
+    :submit="handleSubmit"
+  >
     <NFormItem v-if="!model.beButton && !addTopMenu" path="pid">
       <template #label>
         <FormLabel :label="$t('page.manage.menu.parent')" :tip="$t('page.manage.menu.tips.parent')" />
@@ -507,12 +514,6 @@ async function handleSubmit() {
           </template>
         </NDynamicInput>
       </NFormItem>
-    </template>
-    <template #footer>
-      <NSpace justify="end">
-        <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
-        <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
-      </NSpace>
     </template>
   </FormDialog>
 </template>

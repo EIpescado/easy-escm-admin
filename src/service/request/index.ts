@@ -3,7 +3,7 @@ import { BACKEND_ERROR_CODE, createFlatRequest } from '@sa/axios';
 import { useAuthStore } from '@/store/modules/auth';
 import { getServiceBaseURL } from '@/utils/service';
 import { $t } from '@/locales';
-import { getAuthorization, showErrorMsg } from './shared';
+import { getAcceptLanguage, getAuthorization, showErrorMsg } from './shared';
 import type { RequestInstanceState } from './type';
 
 const isHttpProxy = import.meta.env.DEV && import.meta.env.VITE_HTTP_PROXY === 'Y';
@@ -23,7 +23,11 @@ export const request = createFlatRequest(
     async onRequest(config) {
       const Authorization = getAuthorization();
       const authHeaderName = import.meta.env.VITE_AUTH_HEADER_NAME;
-      Object.assign(config.headers, { [authHeaderName]: Authorization });
+      Object.assign(config.headers, {
+        [authHeaderName]: Authorization,
+        // override the browser language with the locale picked in the app
+        'Accept-Language': getAcceptLanguage()
+      });
 
       return config;
     },

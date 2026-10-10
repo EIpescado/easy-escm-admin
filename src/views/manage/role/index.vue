@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, reactive, ref, watch, type VNode } from 'vue';
+import { computed, h, onBeforeUnmount, ref, watch, type VNode } from 'vue';
 import type { TreeOption } from 'naive-ui';
 import { NTag } from 'naive-ui';
-import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
+import { useTableOperate } from '@/hooks/common/table';
+import { useManageTable } from '@/hooks/business/manage-table';
 import {
   getButtonLabel,
   usePageButtonState,
@@ -27,21 +28,12 @@ import {
   MENU_TYPE_TAG_TYPES,
   type MenuNodeType
 } from '@/utils/menu';
-import { getExportItems, getSortFields, getTableOperateColumnWidth } from '@/utils/table';
-import { getTableSetting, setTableSetting } from '@/utils/table-settings';
+import { getTableOperateColumnWidth } from '@/utils/table';
 import { $t } from '@/locales';
 import TableRowOperation from '@/components/advanced/table-row-operation.vue';
 import TableExportButton from '@/components/advanced/table-export-button.vue';
 import QueryFilter from '@/components/advanced/query-filter/index.vue';
-import QuerySortButton from '@/components/advanced/query-filter/query-sort-button.vue';
-import {
-  createSortId,
-  toOrderItems,
-  toQueryItems,
-  type QueryField,
-  type QueryFilterCondition,
-  type QuerySortItem
-} from '@/components/advanced/query-filter/types';
+import type { QueryField } from '@/components/advanced/query-filter/types';
 import RoleOperateModal from './modules/role-operate-modal.vue';
 
 defineOptions({
@@ -73,29 +65,6 @@ const searchFields = computed<QueryField[]>(() => [
   }
 ]);
 
-const searchConditions = ref<QueryFilterCondition[]>([]);
-
-/** Unique key to persist the table settings (columns & sort) */
-const TABLE_KEY = 'manage_role';
-
-/** Restore the persisted sort, then keep it in sync */
-const searchSort = ref<QuerySortItem[]>(
-  (getTableSetting(TABLE_KEY)?.orders ?? []).map(order => ({
-    id: createSortId(),
-    prop: order.prop,
-    asc: order.asc ?? true
-  }))
-);
-
-watch(searchSort, items => setTableSetting(TABLE_KEY, { orders: toOrderItems(items) }), { deep: true });
-
-const params = reactive<Api.SystemManage.PageQo>({
-  page: 1,
-  size: 10,
-  items: [],
-  orders: toOrderItems(searchSort.value)
-});
-
 /** Buttons of the current route, provided by the backend menu tree */
 const { toolbarButtons, rowButtons, leftTopButtons } = usePageButtons();
 
@@ -125,64 +94,62 @@ function getOperateOptions(row: Api.SystemManage.Role) {
 
 const operateColumnWidth = computed(() => getTableOperateColumnWidth(rowButtons.value.map(button => button.name)));
 
-const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination, scrollX } =
-  useNaivePaginatedTable({
-    tableKey: TABLE_KEY,
-    api: () => fetchRoleList({ page: params.page, size: params.size, items: params.items, orders: params.orders }),
-    transform: response => {
-      const { data: resData, error } = response;
+const {
+  conditions: searchConditions,
+  columns,
+  columnChecks,
+  data,
+  loading,
+  getData,
+  scrollX,
+  tablePagination,
+  exportItems,
+  params,
+  handleSearch,
+  handleReset
+} = useManageTable({
+  tableKey: 'manage_role',
+  api: fetchRoleList,
+  sortable: true,
+  columns: () => {
+    const tableColumns: NaiveUI.TableColumn<Api.SystemManage.Role>[] = [];
 
-      if (!error) {
-        const { rows, page, size, total } = resData;
-
-        return { data: rows || [], pageNum: page, pageSize: size, total };
-      }
-
-      return { data: [], pageNum: 1, pageSize: 10, total: 0 };
-    },
-    columns: () => {
-      const tableColumns: NaiveUI.TableColumn<Api.SystemManage.Role>[] = [];
-
-      // hide the operate column when the route has no row buttons
-      if (rowButtons.value.length) {
-        tableColumns.push({
-          key: 'operate',
-          title: $t('common.operate'),
-          align: 'center',
-          width: operateColumnWidth.value,
-          render: (row: Api.SystemManage.Role) =>
-            h(TableRowOperation, {
-              options: getOperateOptions(row),
-              onSelect: (key: string) => handleRowAction(row, key)
-            })
-        });
-      }
-
-      tableColumns.push(
-        { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
-        { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
-        {
-          key: 'state',
-          title: $t('page.manage.role.stateLabel'),
-          align: 'center',
-          width: 100,
-          render: row =>
-            h(
-              NTag,
-              { type: row.stateEnum === 'ON' ? 'success' : 'error', size: 'small', bordered: false },
-              { default: () => $t(roleStateRecord[row.stateEnum]) }
-            )
-        },
-        { key: 'remark', title: $t('page.manage.role.remark'), align: 'center', minWidth: 160 }
-      );
-
-      return tableColumns;
-    },
-    onPaginationParamsChange: paginationParams => {
-      params.page = paginationParams.page ?? 1;
-      params.size = paginationParams.pageSize ?? 10;
+    // hide the operate column when the route has no row buttons
+    if (rowButtons.value.length) {
+      tableColumns.push({
+        key: 'operate',
+        title: $t('common.operate'),
+        align: 'center',
+        width: operateColumnWidth.value,
+        render: (row: Api.SystemManage.Role) =>
+          h(TableRowOperation, {
+            options: getOperateOptions(row),
+            onSelect: (key: string) => handleRowAction(row, key)
+          })
+      });
     }
-  });
+
+    tableColumns.push(
+      { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
+      { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
+      {
+        key: 'state',
+        title: $t('page.manage.role.stateLabel'),
+        align: 'center',
+        width: 100,
+        render: row =>
+          h(
+            NTag,
+            { type: row.stateEnum === 'ON' ? 'success' : 'error', size: 'small', bordered: false },
+            { default: () => $t(roleStateRecord[row.stateEnum]) }
+          )
+      },
+      { key: 'remark', title: $t('page.manage.role.remark'), align: 'center', minWidth: 160 }
+    );
+
+    return tableColumns;
+  }
+});
 
 // the operate column is driven by the backend row buttons; keep it visible and leftmost
 watch(
@@ -199,26 +166,6 @@ watch(
   },
   { immediate: true }
 );
-
-/** Sortable fields follow the current column settings (checked columns, in table order) */
-const sortFields = computed(() => getSortFields(columnChecks.value));
-
-/** Pagination with the sort button rendered on its right (via the pagination `suffix`) */
-const tablePagination = computed(() => ({
-  ...mobilePagination.value,
-  suffix: () =>
-    h(QuerySortButton, {
-      modelValue: searchSort.value,
-      'onUpdate:modelValue': (value: QuerySortItem[]) => {
-        searchSort.value = value;
-      },
-      fields: sortFields.value,
-      onConfirm: handleSearch
-    })
-}));
-
-/** Export items follow the current column settings (checked columns, in table order) */
-const exportItems = computed(() => getExportItems(columnChecks.value));
 
 const { drawerVisible, openDrawer, closeDrawer, operateType, editingData, checkedRowKeys } = useTableOperate(
   data,
@@ -530,20 +477,6 @@ function handleLeftTopAction(button: Api.SystemManage.ButtonNode) {
  */
 function isMenuAuthButtonDisabled() {
   return menuLoading.value;
-}
-
-function handleSearch() {
-  params.items = toQueryItems(searchConditions.value);
-  params.orders = toOrderItems(searchSort.value);
-  params.page = 1;
-
-  getDataByPage(1);
-}
-
-/** Reset only restores the query conditions to default, keeping the custom sort, without sending a request */
-function handleReset() {
-  params.items = [];
-  params.page = 1;
 }
 
 async function handleSubmitted() {

@@ -69,41 +69,13 @@ getData();
 
 /** Search fields of the query filter */
 const searchFields = computed<QueryField[]>(() => [
-  {
-    prop: 'title',
-    label: $t('page.manage.menu.title'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like', 'eq', 'ne']
-  },
-  {
-    prop: 'menuName',
-    label: $t('page.manage.menu.menuName'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like', 'eq', 'ne']
-  },
-  {
-    prop: 'name',
-    label: $t('page.manage.menu.name'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like', 'eq', 'ne']
-  },
-  {
-    prop: 'path',
-    label: $t('page.manage.menu.path'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like', 'eq', 'ne']
-  },
-  {
-    prop: 'component',
-    label: $t('page.manage.menu.component'),
-    valueType: 'text',
-    defaultType: 'like',
-    types: ['like', 'eq', 'ne']
-  },
+  // the five identifying fields are merged into one keyword condition: a node matches when any of
+  // them contains the keyword, mirrored by `matchMenuCondition` below
+  { prop: 'title', label: $t('page.manage.menu.title'), fast: true },
+  { prop: 'menuName', label: $t('page.manage.menu.menuName'), fast: true },
+  { prop: 'name', label: $t('page.manage.menu.name'), fast: true },
+  { prop: 'path', label: $t('page.manage.menu.path'), fast: true },
+  { prop: 'component', label: $t('page.manage.menu.component'), fast: true },
   {
     prop: 'type',
     label: $t('page.manage.menu.type'),
@@ -170,9 +142,9 @@ function getMenuNodeFieldValue(node: Api.SystemManage.MenuNode, prop: string): s
   }
 }
 
-/** Whether a node satisfies a single query condition */
-function matchMenuCondition(node: Api.SystemManage.MenuNode, condition: QueryFilterCondition) {
-  const fieldValue = getMenuNodeFieldValue(node, condition.prop).toLowerCase();
+/** Whether a single field of a node satisfies the condition operator */
+function matchMenuField(node: Api.SystemManage.MenuNode, prop: string, condition: QueryFilterCondition) {
+  const fieldValue = getMenuNodeFieldValue(node, prop).toLowerCase();
   const values = condition.values.map(value => String(value).toLowerCase());
 
   switch (condition.type) {
@@ -191,6 +163,15 @@ function matchMenuCondition(node: Api.SystemManage.MenuNode, condition: QueryFil
     default:
       return true;
   }
+}
+
+/** Whether a node satisfies a single query condition; a merged keyword condition OR-s all its props */
+function matchMenuCondition(node: Api.SystemManage.MenuNode, condition: QueryFilterCondition) {
+  if (condition.fastProps?.length) {
+    return condition.fastProps.some(prop => matchMenuField(node, prop, condition));
+  }
+
+  return matchMenuField(node, condition.prop, condition);
 }
 
 /** Whether a node satisfies all applied conditions */

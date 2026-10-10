@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, watch } from 'vue';
-import { NEllipsis, NTag } from 'naive-ui';
+import { computed, h, ref, watch } from 'vue';
+import { NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
-import { useNaivePaginatedTable } from '@/hooks/common/table';
+import { useManageTable } from '@/hooks/business/manage-table';
 import { FORM_DETAIL_LOAD_DELAY, sleep } from '@/hooks/common/form';
 import {
   getButtonLabel,
@@ -24,7 +24,7 @@ import { getTableOperateColumnWidth } from '@/utils/table';
 import { $t } from '@/locales';
 import QueryFilter from '@/components/advanced/query-filter/index.vue';
 import TableRowOperation from '@/components/advanced/table-row-operation.vue';
-import { toQueryItems, type QueryField, type QueryFilterCondition } from '@/components/advanced/query-filter/types';
+import type { QueryField } from '@/components/advanced/query-filter/types';
 import DictOperateModal from './modules/dict-operate-modal.vue';
 import DictEntryOperateModal from './modules/dict-entry-operate-modal.vue';
 
@@ -35,11 +35,6 @@ defineOptions({
 /** whether an `AbleStateEnum` node is enabled (the enum name is exposed as `stateEnum`) */
 function isEnabled(stateEnum?: string) {
   return stateEnum === 'ON';
-}
-
-/** keep a text column on a single line, showing a tooltip when it overflows */
-function renderEllipsis(text?: string | number | null) {
-  return h(NEllipsis, { tooltip: true }, { default: () => String(text ?? '') || '-' });
 }
 
 /** Buttons of the current route, provided by the backend menu tree */
@@ -70,15 +65,6 @@ const dictSearchFields = computed<QueryField[]>(() => [
   }
 ]);
 
-const dictConditions = ref<QueryFilterCondition[]>([]);
-
-const dictParams = reactive<Api.SystemManage.PageQo>({
-  page: 1,
-  size: 10,
-  items: [],
-  orders: []
-});
-
 const dictButtonRules: PageButtonStateRules<Api.SystemManage.Dict> = {
   enable: ({ rows }) => rows.every(row => isEnabled(row.stateEnum)),
   disable: ({ rows }) => rows.every(row => !isEnabled(row.stateEnum)),
@@ -102,27 +88,18 @@ function getDictOperateOptions(row: Api.SystemManage.Dict) {
 }
 
 const {
+  conditions: dictConditions,
   columns: dictColumns,
   data: dictData,
   loading: dictLoading,
   getData: getDictData,
-  getDataByPage: getDictDataByPage,
   mobilePagination: dictPagination,
-  scrollX: dictScrollX
-} = useNaivePaginatedTable({
+  scrollX: dictScrollX,
+  handleSearch: handleDictSearch,
+  handleReset: handleDictReset
+} = useManageTable({
   tableKey: 'manage_dict',
-  api: () => fetchDictSearch(dictParams),
-  transform: response => {
-    const { data: resData, error } = response;
-
-    if (!error) {
-      const { rows, page, size, total } = resData;
-
-      return { data: rows || [], pageNum: page, pageSize: size, total };
-    }
-
-    return { data: [], pageNum: 1, pageSize: 10, total: 0 };
-  },
+  api: fetchDictSearch,
   columns: () => {
     const columns: NaiveUI.TableColumn<Api.SystemManage.Dict>[] = [];
 
@@ -145,13 +122,13 @@ const {
         key: 'code',
         title: $t('page.manage.dict.code'),
         minWidth: 160,
-        render: (row: Api.SystemManage.Dict) => renderEllipsis(row.code)
+        ellipsis: { tooltip: true }
       },
       {
         key: 'name',
         title: $t('page.manage.dict.name'),
         minWidth: 160,
-        render: (row: Api.SystemManage.Dict) => renderEllipsis(row.name)
+        ellipsis: { tooltip: true }
       },
       {
         key: 'state',
@@ -181,15 +158,11 @@ const {
         key: 'remark',
         title: $t('page.manage.dict.remark'),
         minWidth: 160,
-        render: (row: Api.SystemManage.Dict) => renderEllipsis(row.remark)
+        ellipsis: { tooltip: true }
       }
     );
 
     return columns;
-  },
-  onPaginationParamsChange: paginationParams => {
-    dictParams.page = paginationParams.page ?? 1;
-    dictParams.size = paginationParams.pageSize ?? 10;
   }
 });
 
@@ -222,17 +195,17 @@ const entrySearchFields = computed<QueryField[]>(() => [
   { prop: 'val', label: $t('page.manage.dict.entry.val'), fast: true },
   { prop: 'val2', label: $t('page.manage.dict.entry.val2'), fast: true },
   { prop: 'val3', label: $t('page.manage.dict.entry.val3'), fast: true },
-  { prop: 'val4', label: $t('page.manage.dict.entry.val4'), fast: true }
+  { prop: 'val4', label: $t('page.manage.dict.entry.val4'), fast: true },
+  // same state filter as the dictionary list
+  {
+    prop: 'state',
+    label: $t('page.manage.dict.stateLabel'),
+    valueType: 'select',
+    defaultType: 'eq',
+    types: ['eq', 'ne'],
+    options: translateOptions(enableStateOptions)
+  }
 ]);
-
-const entryConditions = ref<QueryFilterCondition[]>([]);
-
-const entryParams = reactive<Api.SystemManage.PageQo>({
-  page: 1,
-  size: 10,
-  items: [],
-  orders: []
-});
 
 const entryButtonRules: PageButtonStateRules<Api.SystemManage.DictEntry> = {
   enable: ({ rows }) => rows.every(row => isEnabled(row.stateEnum)),
@@ -257,29 +230,24 @@ function getEntryOperateOptions(row: Api.SystemManage.DictEntry) {
 }
 
 const {
+  conditions: entryConditions,
   columns: entryColumns,
   data: entryData,
   loading: entryLoading,
   getData: getEntryData,
   getDataByPage: getEntryDataByPage,
   mobilePagination: entryPagination,
-  scrollX: entryScrollX
-} = useNaivePaginatedTable({
+  scrollX: entryScrollX,
+  params: entryParams,
+  buildItems: buildEntryItems,
+  handleSearch: searchEntries
+} = useManageTable({
   tableKey: 'manage_dict_entry',
   // the entries list is linked to the selected dictionary, so do not fetch on mount
   immediate: false,
-  api: () => fetchDictEntrySearch(entryParams),
-  transform: response => {
-    const { data: resData, error } = response;
-
-    if (!error) {
-      const { rows, page, size, total } = resData;
-
-      return { data: rows || [], pageNum: page, pageSize: size, total };
-    }
-
-    return { data: [], pageNum: 1, pageSize: 10, total: 0 };
-  },
+  api: fetchDictEntrySearch,
+  // the entries of the dictionary selected on the left
+  extraItems: () => (activeDictId.value ? [{ prop: 'pid', values: [activeDictId.value], type: 'eq' as const }] : []),
   columns: () => {
     const columns: NaiveUI.TableColumn<Api.SystemManage.DictEntry>[] = [];
 
@@ -302,31 +270,31 @@ const {
         key: 'code',
         title: $t('page.manage.dict.entry.code'),
         minWidth: 140,
-        render: (row: Api.SystemManage.DictEntry) => renderEllipsis(row.code)
+        ellipsis: { tooltip: true }
       },
       {
         key: 'val',
         title: $t('page.manage.dict.entry.val'),
         minWidth: 120,
-        render: (row: Api.SystemManage.DictEntry) => renderEllipsis(row.val)
+        ellipsis: { tooltip: true }
       },
       {
         key: 'val2',
         title: $t('page.manage.dict.entry.val2'),
         minWidth: 110,
-        render: (row: Api.SystemManage.DictEntry) => renderEllipsis(row.val2)
+        ellipsis: { tooltip: true }
       },
       {
         key: 'val3',
         title: $t('page.manage.dict.entry.val3'),
         minWidth: 110,
-        render: (row: Api.SystemManage.DictEntry) => renderEllipsis(row.val3)
+        ellipsis: { tooltip: true }
       },
       {
         key: 'val4',
         title: $t('page.manage.dict.entry.val4'),
         minWidth: 110,
-        render: (row: Api.SystemManage.DictEntry) => renderEllipsis(row.val4)
+        ellipsis: { tooltip: true }
       },
       { key: 'sn', title: $t('page.manage.dict.entry.sn'), align: 'center', width: 80 },
       {
@@ -345,17 +313,19 @@ const {
         key: 'remark',
         title: $t('page.manage.dict.entry.remark'),
         minWidth: 140,
-        render: (row: Api.SystemManage.DictEntry) => renderEllipsis(row.remark)
+        ellipsis: { tooltip: true }
       }
     );
 
     return columns;
-  },
-  onPaginationParamsChange: paginationParams => {
-    entryParams.page = paginationParams.page ?? 1;
-    entryParams.size = paginationParams.pageSize ?? 10;
   }
 });
+
+/**
+ * The entries list belongs to the selected dictionary, so its pagination stays inert (no page change,
+ * hence no request) until a dictionary is picked on the left.
+ */
+const entryTablePagination = computed(() => ({ ...entryPagination.value, disabled: !activeDictId.value }));
 
 /** ---------------- modals & actions ---------------- */
 
@@ -509,29 +479,6 @@ function isEntryToolbarButtonDisabled(button: Api.SystemManage.ButtonNode) {
   return !activeDictId.value && ENTRY_CREATE_ACTIONS.includes(button.click ?? '');
 }
 
-function handleDictSearch() {
-  dictParams.items = toQueryItems(dictConditions.value);
-  dictParams.page = 1;
-
-  getDictDataByPage(1);
-}
-
-function handleDictReset() {
-  dictParams.items = [];
-  dictParams.page = 1;
-}
-
-/** build the entries query items: the query-bar conditions plus the linked dictionary */
-function buildEntryItems() {
-  const items = toQueryItems(entryConditions.value);
-
-  if (activeDictId.value) {
-    items.push({ prop: 'pid', values: [activeDictId.value], type: 'eq' });
-  }
-
-  return items;
-}
-
 /** select a dictionary and refresh the linked entries list */
 async function selectDict(row: Api.SystemManage.Dict) {
   activeDictId.value = row.id;
@@ -549,11 +496,15 @@ watch(dictData, rows => {
   }
 });
 
+/** the entries list is tied to the selected dictionary, never query it without one */
 function handleEntrySearch() {
-  entryParams.items = buildEntryItems();
-  entryParams.page = 1;
+  if (!activeDictId.value) {
+    window.$message?.warning($t('page.manage.dict.selectDict'));
 
-  getEntryDataByPage(1);
+    return;
+  }
+
+  searchEntries();
 }
 
 function handleEntryReset() {
@@ -579,7 +530,7 @@ async function handleEntrySubmitted() {
 
 <template>
   <div class="min-h-0 flex flex-1 gap-16px overflow-hidden">
-    <div class="min-w-0 min-h-0 flex flex-[6] flex-col gap-16px overflow-hidden">
+    <div class="min-w-0 min-h-0 flex flex-[5] flex-col gap-16px overflow-hidden">
       <QueryFilter
         v-model="dictConditions"
         :fields="dictSearchFields"
@@ -610,7 +561,7 @@ async function handleEntrySubmitted() {
         />
       </NCard>
     </div>
-    <div class="min-w-0 min-h-0 flex flex-[4] flex-col gap-16px overflow-hidden">
+    <div class="min-w-0 min-h-0 flex flex-[5] flex-col gap-16px overflow-hidden">
       <QueryFilter
         v-model="entryConditions"
         :fields="entrySearchFields"
@@ -640,7 +591,7 @@ async function handleEntrySubmitted() {
           :data="entryData"
           :loading="entryLoading"
           :row-key="row => row.id"
-          :pagination="entryPagination"
+          :pagination="entryTablePagination"
           :paginate-single-page="true"
           :scroll-x="entryScrollX"
           remote

@@ -25,7 +25,7 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-const { formRef, validate, restoreValidation } = useNaiveForm();
+const { formRef, restoreValidation } = useNaiveForm();
 
 const model = reactive({
   password: '',
@@ -63,8 +63,6 @@ watch(visible, val => {
 });
 
 async function handleSubmit() {
-  await validate();
-
   const { error } = await fetchResetUserPassword(props.userId, model.password);
 
   if (!error) {
@@ -82,6 +80,7 @@ async function handleSubmit() {
     :title="$t('page.manage.user.resetPassword')"
     :model="model"
     :rules="rules"
+    :submit="handleSubmit"
   >
     <NFormItem v-if="username" class="col-span-2">
       <template #label>
@@ -112,12 +111,6 @@ async function handleSubmit() {
       />
     </NFormItem>
     <div class="col-span-2 text-12px text-gray-400">{{ $t('page.manage.user.resetPasswordTip') }}</div>
-    <template #footer>
-      <NSpace justify="end">
-        <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
-        <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
-      </NSpace>
-    </template>
   </FormDialog>
 </template>
 

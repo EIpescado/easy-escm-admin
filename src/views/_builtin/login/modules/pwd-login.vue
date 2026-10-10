@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { loginModuleRecord } from '@/constants/app';
 import { useAuthStore } from '@/store/modules/auth';
 import { useRouterPush } from '@/hooks/common/router';
@@ -34,9 +34,22 @@ const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
   };
 });
 
+/** whether the login request is in flight, so the form cannot be submitted twice */
+const submitting = ref(false);
+
 async function handleSubmit() {
-  await validate();
-  await authStore.login(model.username, model.password);
+  if (submitting.value) return;
+
+  // set the flag before the first await, otherwise a re-submit in the same tick slips through
+  submitting.value = true;
+
+  try {
+    await validate();
+
+    await authStore.login(model.username, model.password);
+  } finally {
+    submitting.value = false;
+  }
 }
 
 interface ThirdPartyLogin {
@@ -76,7 +89,15 @@ const thirdPartyLogins: ThirdPartyLogin[] = [
           {{ $t('page.login.pwdLogin.forgetPassword') }}
         </NButton>
       </div>
-      <NButton type="primary" size="large" round block :loading="authStore.loginLoading" @click="handleSubmit">
+      <NButton
+        type="primary"
+        size="large"
+        round
+        block
+        :loading="submitting"
+        :disabled="submitting"
+        @click="handleSubmit"
+      >
         {{ $t('common.confirm') }}
       </NButton>
       <div class="flex-y-center justify-between gap-12px">

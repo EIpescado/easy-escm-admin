@@ -24,7 +24,7 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-const { formRef, validate, restoreValidation } = useNaiveForm();
+const { formRef, restoreValidation } = useNaiveForm();
 const { defaultRequiredRule } = useFormRules();
 
 const model = reactive<Api.SystemManage.RoleForm>({
@@ -55,8 +55,6 @@ watch(visible, val => {
 });
 
 async function handleSubmit() {
-  await validate();
-
   const { error } = props.operateType === 'add' ? await fetchCreateRole(model) : await fetchUpdateRole(model);
 
   if (!error) {
@@ -67,7 +65,14 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <FormDialog ref="formRef" v-model:visible="visible" :title="title" :model="model" :rules="rules">
+  <FormDialog
+    ref="formRef"
+    v-model:visible="visible"
+    :title="title"
+    :model="model"
+    :rules="rules"
+    :submit="handleSubmit"
+  >
     <NFormItem path="roleCode">
       <template #label>
         <FormLabel :label="$t('page.manage.role.roleCode')" />
@@ -90,12 +95,6 @@ async function handleSubmit() {
       </template>
       <NInput v-model:value="model.remark" type="textarea" :rows="3" :placeholder="$t('page.manage.role.remark')" />
     </NFormItem>
-    <template #footer>
-      <NSpace justify="end">
-        <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
-        <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
-      </NSpace>
-    </template>
   </FormDialog>
 </template>
 

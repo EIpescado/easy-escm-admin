@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, watch } from 'vue';
+import { computed, h, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { NButton, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
-import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
+import { useTableOperate } from '@/hooks/common/table';
+import { useManageTable } from '@/hooks/business/manage-table';
 import { FORM_DETAIL_LOAD_DELAY, sleep } from '@/hooks/common/form';
 import {
   getButtonLabel,
@@ -14,21 +15,12 @@ import {
 import { fetchToggleUserState, fetchUserDetail, fetchUserExport, fetchUserList } from '@/service/api';
 import { userStateOptions, userStateRecord } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
-import { getExportItems, getSortFields, getTableOperateColumnWidth } from '@/utils/table';
-import { getTableSetting, setTableSetting } from '@/utils/table-settings';
+import { getTableOperateColumnWidth } from '@/utils/table';
 import { $t } from '@/locales';
 import TableRowOperation from '@/components/advanced/table-row-operation.vue';
 import TableExportButton from '@/components/advanced/table-export-button.vue';
 import QueryFilter from '@/components/advanced/query-filter/index.vue';
-import QuerySortButton from '@/components/advanced/query-filter/query-sort-button.vue';
-import {
-  createSortId,
-  toOrderItems,
-  toQueryItems,
-  type QueryField,
-  type QueryFilterCondition,
-  type QuerySortItem
-} from '@/components/advanced/query-filter/types';
+import type { QueryField } from '@/components/advanced/query-filter/types';
 import UserOperateModal from './modules/user-operate-modal.vue';
 import UserResetPasswordModal from './modules/user-reset-password-modal.vue';
 
@@ -60,29 +52,6 @@ const searchFields = computed<QueryField[]>(() => [
   }
 ]);
 
-const searchConditions = ref<QueryFilterCondition[]>([]);
-
-/** Unique key to persist the table settings (columns & sort) */
-const TABLE_KEY = 'manage_user';
-
-/** Restore the persisted sort, then keep it in sync */
-const searchSort = ref<QuerySortItem[]>(
-  (getTableSetting(TABLE_KEY)?.orders ?? []).map(order => ({
-    id: createSortId(),
-    prop: order.prop,
-    asc: order.asc ?? true
-  }))
-);
-
-watch(searchSort, items => setTableSetting(TABLE_KEY, { orders: toOrderItems(items) }), { deep: true });
-
-const params = reactive<Api.SystemManage.PageQo>({
-  page: 1,
-  size: 10,
-  items: [],
-  orders: toOrderItems(searchSort.value)
-});
-
 /** Buttons of the current route, provided by the backend menu tree */
 const { toolbarButtons, rowButtons } = usePageButtons();
 
@@ -101,19 +70,6 @@ const buttonStateRules: PageButtonStateRules<Api.SystemManage.User> = {
 
 const { isDisabled: isButtonDisabled } = usePageButtonState(buttonStateRules);
 
-/** Toolbar buttons (position `top`), text comes from the backend button `name` */
-function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
-  const handlers: Record<string, () => void> = { create: handleAdd, search: handleSearch };
-
-  const handler = handlers[button.click ?? ''];
-
-  if (handler) {
-    handler();
-  } else {
-    window.$message?.info($t('common.lookForward'));
-  }
-}
-
 /** Row action buttons (position `row`), text comes from the backend button `name` */
 function getOperateOptions(row: Api.SystemManage.User) {
   return rowButtons.value.map(button => ({
@@ -129,82 +85,80 @@ const operateColumnWidth = computed(() =>
   getTableOperateColumnWidth(rowButtons.value.map(button => getButtonLabel(button)))
 );
 
-const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination, scrollX } =
-  useNaivePaginatedTable({
-    tableKey: TABLE_KEY,
-    api: () => fetchUserList({ page: params.page, size: params.size, items: params.items, orders: params.orders }),
-    transform: response => {
-      const { data: resData, error } = response;
+const {
+  conditions: searchConditions,
+  columns,
+  columnChecks,
+  data,
+  loading,
+  getData,
+  scrollX,
+  tablePagination,
+  exportItems,
+  params,
+  handleSearch,
+  handleReset
+} = useManageTable({
+  tableKey: 'manage_user',
+  api: fetchUserList,
+  sortable: true,
+  columns: () => {
+    const tableColumns: NaiveUI.TableColumn<Api.SystemManage.User>[] = [];
 
-      if (!error) {
-        const { rows, page, size, total } = resData;
-
-        return { data: rows || [], pageNum: page, pageSize: size, total };
-      }
-
-      return { data: [], pageNum: 1, pageSize: 10, total: 0 };
-    },
-    columns: () => {
-      const tableColumns: NaiveUI.TableColumn<Api.SystemManage.User>[] = [];
-
-      // hide the operate column when the route has no row buttons
-      if (rowButtons.value.length) {
-        tableColumns.push({
-          key: 'operate',
-          title: $t('common.operate'),
-          align: 'center',
-          width: operateColumnWidth.value,
-          render: (row: Api.SystemManage.User) =>
-            h(TableRowOperation, {
-              options: getOperateOptions(row),
-              onSelect: (key: string) => handleRowAction(row, key)
-            })
-        });
-      }
-
-      tableColumns.push(
-        { type: 'selection', align: 'center', width: 48 },
-        {
-          key: 'username',
-          title: $t('page.manage.user.username'),
-          align: 'center',
-          minWidth: 100,
-          render: row =>
-            h(
-              NButton,
-              { text: true, type: 'primary', onClick: () => handleUserDetail(row.id) },
-              { default: () => row.username }
-            )
-        },
-        { key: 'nickname', title: $t('page.manage.user.nickname'), align: 'center', minWidth: 100 },
-        { key: 'phone', title: $t('page.manage.user.phone'), align: 'center', minWidth: 120 },
-        { key: 'mail', title: $t('page.manage.user.mail'), align: 'center', minWidth: 160 },
-        {
-          key: 'state',
-          title: $t('page.manage.user.stateLabel'),
-          align: 'center',
-          width: 100,
-          render: row => {
-            const type = row.stateEnum === 'NORMAL' ? 'success' : row.stateEnum === 'FORBIDDEN' ? 'error' : 'warning';
-
-            return h(
-              NTag,
-              { type, size: 'small', bordered: false },
-              { default: () => $t(userStateRecord[row.stateEnum]) }
-            );
-          }
-        },
-        { key: 'registerTime', title: $t('page.manage.user.registerTime'), align: 'center', minWidth: 170 },
-        { key: 'lastLoginTime', title: $t('page.manage.user.lastLoginTime'), align: 'center', minWidth: 170 }
-      );
-
-      return tableColumns;
-    },
-    onPaginationParamsChange: paginationParams => {
-      params.page = paginationParams.page ?? 1;
-      params.size = paginationParams.pageSize ?? 10;
+    // hide the operate column when the route has no row buttons
+    if (rowButtons.value.length) {
+      tableColumns.push({
+        key: 'operate',
+        title: $t('common.operate'),
+        align: 'center',
+        width: operateColumnWidth.value,
+        render: (row: Api.SystemManage.User) =>
+          h(TableRowOperation, {
+            options: getOperateOptions(row),
+            onSelect: (key: string) => handleRowAction(row, key)
+          })
+      });
     }
-  });
+
+    tableColumns.push(
+      { type: 'selection', align: 'center', width: 48 },
+      {
+        key: 'username',
+        title: $t('page.manage.user.username'),
+        align: 'center',
+        minWidth: 100,
+        render: row =>
+          h(
+            NButton,
+            { text: true, type: 'primary', onClick: () => handleUserDetail(row.id) },
+            { default: () => row.username }
+          )
+      },
+      { key: 'nickname', title: $t('page.manage.user.nickname'), align: 'center', minWidth: 100 },
+      { key: 'phone', title: $t('page.manage.user.phone'), align: 'center', minWidth: 120 },
+      { key: 'mail', title: $t('page.manage.user.mail'), align: 'center', minWidth: 160 },
+      {
+        key: 'state',
+        title: $t('page.manage.user.stateLabel'),
+        align: 'center',
+        width: 100,
+        render: row => {
+          const type = row.stateEnum === 'NORMAL' ? 'success' : row.stateEnum === 'FORBIDDEN' ? 'error' : 'warning';
+
+          return h(
+            NTag,
+            { type, size: 'small', bordered: false },
+            { default: () => $t(userStateRecord[row.stateEnum]) }
+          );
+        }
+      },
+      { key: 'registerTime', title: $t('page.manage.user.registerTime'), align: 'center', minWidth: 170 },
+      { key: 'lastLoginTime', title: $t('page.manage.user.lastLoginTime'), align: 'center', minWidth: 170 }
+    );
+
+    return tableColumns;
+  }
+});
 
 // the operate column is driven by the backend row buttons; keep it visible and leftmost
 watch(
@@ -222,25 +176,18 @@ watch(
   { immediate: true }
 );
 
-/** Sortable fields follow the current column settings (checked columns, in table order) */
-const sortFields = computed(() => getSortFields(columnChecks.value));
+/** Toolbar buttons (position `top`), text comes from the backend button `name` */
+function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
+  const handlers: Record<string, () => void> = { create: handleAdd, search: handleSearch };
 
-/** Pagination with the sort button rendered on its right (via the pagination `suffix`) */
-const tablePagination = computed(() => ({
-  ...mobilePagination.value,
-  suffix: () =>
-    h(QuerySortButton, {
-      modelValue: searchSort.value,
-      'onUpdate:modelValue': (value: QuerySortItem[]) => {
-        searchSort.value = value;
-      },
-      fields: sortFields.value,
-      onConfirm: handleSearch
-    })
-}));
+  const handler = handlers[button.click ?? ''];
 
-/** Export items follow the current column settings (checked columns, in table order) */
-const exportItems = computed(() => getExportItems(columnChecks.value));
+  if (handler) {
+    handler();
+  } else {
+    window.$message?.info($t('common.lookForward'));
+  }
+}
 
 const { drawerVisible, openDrawer, closeDrawer, operateType, editingData, checkedRowKeys } = useTableOperate(
   data,
@@ -300,20 +247,6 @@ async function handleEditUser(id: string) {
 /** navigate to the standalone user detail page */
 function handleUserDetail(id: string) {
   router.push({ name: 'manage_user-detail', params: { id } });
-}
-
-function handleSearch() {
-  params.items = toQueryItems(searchConditions.value);
-  params.orders = toOrderItems(searchSort.value);
-  params.page = 1;
-
-  getDataByPage(1);
-}
-
-/** Reset only restores the query conditions to default, keeping the custom sort, without sending a request */
-function handleReset() {
-  params.items = [];
-  params.page = 1;
 }
 
 const { bool: resetPwdVisible, setTrue: openResetPwd } = useBoolean();
