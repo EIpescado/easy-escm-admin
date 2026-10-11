@@ -76,6 +76,21 @@ export interface QueryField {
    * prop by {@link toQueryItems}, so the backend OR-s them instead of AND-ing them.
    */
   fast?: boolean;
+  /**
+   * Whether the field is a top-level param of the request body instead of a WHERE condition
+   *
+   * A `param` field is never sent inside `items`; its single value is merged into the request body
+   * directly, for the fixed top-level fields of a page Qo (e.g. `showRequestContent`).
+   */
+  param?: boolean;
+  /**
+   * Initial values of the field's condition, applied when the list first renders
+   *
+   * Mainly for date fields, e.g. a "today" / "last year" default range: with the default `between`
+   * operator pass `[start, end]`. `useManageTable` seeds the condition from it, so the first search
+   * already carries the default and the filter shows the values.
+   */
+  defaultValues?: string[];
 }
 
 /** One condition edited by the query filter (backend query item + a local id) */
@@ -91,6 +106,11 @@ export interface QueryFilterCondition {
    * searches every merged field.
    */
   fastProps?: string[];
+  /**
+   * Copied from {@link QueryField.param}: this condition is a top-level request param, not a WHERE
+   * item, so {@link toQueryItems} skips it.
+   */
+  param?: boolean;
 }
 
 /** One sort rule edited by the query filter (backend order item + a local id) */
@@ -224,6 +244,7 @@ export function createCondition(field: QueryField, overrides?: Partial<QueryFilt
     prop: field.prop,
     type: getDefaultOperator(field),
     values: [],
+    param: field.param,
     ...overrides
   };
 }
@@ -244,22 +265,26 @@ export function isConditionFilled(condition: QueryFilterCondition) {
 /**
  * Convert the internal conditions to backend query items
  *
- * Empty conditions are dropped, so the caller does not need to filter them.
+ * Empty conditions are dropped, so the caller does not need to filter them. `param` conditions are
+ * skipped as well: they are top-level request params, collected by `useManageTable#buildParams`
+ * instead of being sent inside `items`.
  *
  * A merged keyword condition is expanded into one item per merged field, and every one of them is
  * flagged with `fast: true`, so the backend OR-s them (`a.code like ? or a.name like ?`) instead of
  * AND-ing them like any other pair of items.
  */
 export function toQueryItems(conditions: QueryFilterCondition[]): Api.SystemManage.QueryItem[] {
-  return conditions.filter(isConditionFilled).flatMap(condition => {
-    const values = normalizeValues(condition.type, condition.values).map(String);
+  return conditions
+    .filter(condition => !condition.param && isConditionFilled(condition))
+    .flatMap(condition => {
+      const values = normalizeValues(condition.type, condition.values).map(String);
 
-    if (condition.fastProps?.length) {
-      return condition.fastProps.map(prop => ({ prop, type: condition.type, values, fast: true }));
-    }
+      if (condition.fastProps?.length) {
+        return condition.fastProps.map(prop => ({ prop, type: condition.type, values, fast: true }));
+      }
 
-    return { prop: condition.prop, type: condition.type, values };
-  });
+      return { prop: condition.prop, type: condition.type, values };
+    });
 }
 
 let sortSeed = 0;

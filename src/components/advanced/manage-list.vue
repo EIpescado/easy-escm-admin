@@ -193,6 +193,7 @@ const {
   handleSearch,
   handleReset,
   buildItems,
+  buildParams,
   reloadColumns
 } = useManageTable<Row>({
   tableKey: props.tableKey,
@@ -200,6 +201,7 @@ const {
   api: (query: Api.SystemManage.PageQo): Promise<PageResponse> => fetchPageSearch<Row>(props.url, query),
   sortable: props.sortable,
   immediate: props.immediate,
+  fields: () => props.fields,
   extraItems: props.extraItems,
   columns: () => {
     const tableColumns: NaiveUI.TableColumn<Row>[] = [];
@@ -268,7 +270,7 @@ async function reload() {
 
 /** export the visible columns of this list as an xlsx stream */
 function handleExport() {
-  return fetchPageExport(props.url, { ...params, exportItems: exportItems.value });
+  return fetchPageExport(props.url, { ...params, ...buildParams(), exportItems: exportItems.value });
 }
 
 /**

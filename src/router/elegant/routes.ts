@@ -85,6 +85,15 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'manage_callback',
+        path: '/manage/callback',
+        component: 'view.manage_callback',
+        meta: {
+          title: 'manage_callback',
+          i18nKey: 'route.manage_callback'
+        }
+      },
+      {
         name: 'manage_dict',
         path: '/manage/dict',
         component: 'view.manage_dict',

@@ -30,6 +30,9 @@ const local: App.I18n.Schema = {
     file: {
       upload: 'Upload',
       download: 'Download'
+    },
+    callback: {
+      reExecute: 'Re-execute'
     }
   },
   common: {
@@ -269,6 +272,7 @@ const local: App.I18n.Schema = {
     manage_menu: 'Menu',
     manage_dict: 'Dictionary',
     manage_file: 'File',
+    manage_callback: 'Callback',
     'manage_user-dict': 'User Dictionary',
     'manage_user-detail': 'User Detail'
   },
@@ -480,6 +484,25 @@ const local: App.I18n.Schema = {
           uploading: 'Uploading chunks {percent}%',
           merging: 'Merging chunks…'
         }
+      },
+      callback: {
+        id: 'Callback ID',
+        type: 'Callback Type',
+        name: 'Callback Name',
+        success: 'Result',
+        successYes: 'Success',
+        successNo: 'Failed',
+        subject: 'Subject',
+        primaryKey: 'Business Key',
+        traceId: 'Trace ID',
+        creator: 'Triggered By',
+        requestTime: 'Request Time',
+        requestContent: 'Request',
+        responseContent: 'Response',
+        showRequestContent: 'Show Request',
+        showResponseContent: 'Show Response',
+        reExecuteConfirm: 'Re-execute the {count} selected callback(s)?',
+        reExecuteSuccess: 'Re-execution triggered'
       }
     },
     home: {

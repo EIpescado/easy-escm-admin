@@ -8,6 +8,7 @@ import type { PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { fetchToggleUserState, fetchUserDetail } from '@/service/api';
 import { userStateOptions, userStateRecord } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
+import { getLastYearRange } from '@/utils/date';
 import { $t } from '@/locales';
 import ManageList from '@/components/advanced/manage-list.vue';
 import type { QueryField } from '@/components/advanced/query-filter/types';
@@ -22,22 +23,24 @@ const router = useRouter();
 
 /** Search fields of the query filter */
 const searchFields = computed<QueryField[]>(() => [
+  {
+    prop: 'registerTime',
+    label: $t('page.manage.user.registerTime'),
+    valueType: 'date',
+    types: ['between', 'ge', 'le', 'eq'],
+    defaultValues: getLastYearRange()
+  },
   { prop: 'username', label: $t('page.manage.user.username'), valueType: 'text', types: ['like'] },
   { prop: 'nickname', label: $t('page.manage.user.nickname'), valueType: 'text', types: ['like'] },
   { prop: 'phone', label: $t('page.manage.user.phone'), valueType: 'text', types: ['eq', 'like'] },
   { prop: 'mail', label: $t('page.manage.user.mail'), valueType: 'text' },
   {
-    prop: 'registerTime',
-    label: $t('page.manage.user.registerTime'),
-    valueType: 'date',
-    types: ['between', 'ge', 'le', 'eq']
-  },
-  {
     prop: 'state',
     label: $t('page.manage.user.stateLabel'),
     valueType: 'select',
     types: ['eq'],
-    options: translateOptions(userStateOptions)
+    options: translateOptions(userStateOptions),
+    defaultValues: ['NORMAL']
   }
 ]);
 

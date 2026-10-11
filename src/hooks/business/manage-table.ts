@@ -5,7 +5,9 @@ import { getExportItems, getSortFields } from '@/utils/table';
 import { getTableSetting, setTableSetting } from '@/utils/table-settings';
 import QuerySortButton from '@/components/advanced/query-filter/query-sort-button.vue';
 import {
+  createCondition,
   createSortId,
+  isConditionFilled,
   toOrderItems,
   toQueryItems,
   type QueryField,
@@ -31,6 +33,12 @@ export interface UseManageTableOptions<Row extends Record<string, any>> {
   api: (params: Api.SystemManage.PageQo) => Promise<PageResponse<Row>>;
   /** table columns factory */
   columns: () => NaiveUI.TableColumn<Row>[];
+  /**
+   * Fields of the query filter, used to seed the conditions that declare `defaultValues`
+   *
+   * @see QueryField.defaultValues
+   */
+  fields?: () => QueryField[];
   /** conditions always applied besides the filter, e.g. the fixed `pid` of a dictionary's entries */
   extraItems?: () => Api.SystemManage.QueryItem[];
   /**
@@ -48,10 +56,17 @@ export interface UseManageTableOptions<Row extends Record<string, any>> {
 }
 
 export function useManageTable<Row extends Record<string, any>>(options: UseManageTableOptions<Row>) {
-  const { tableKey, api, columns, extraItems, immediate = true, sortable = false } = options;
+  const { tableKey, api, columns, fields, extraItems, immediate = true, sortable = false } = options;
 
-  /** filter conditions edited by the query filter */
-  const conditions = ref<QueryFilterCondition[]>([]);
+  /**
+   * Filter conditions, seeded from the fields that declare `defaultValues` (e.g. a default date
+   * range); the query filter keeps them and preserves their values.
+   */
+  const conditions = ref<QueryFilterCondition[]>(
+    (fields?.() ?? [])
+      .filter(field => field.defaultValues?.length)
+      .map(field => createCondition(field, { values: field.defaultValues }))
+  );
 
   /** custom sort rules, restored from the table settings */
   const sort = ref<QuerySortItem[]>(
@@ -69,17 +84,36 @@ export function useManageTable<Row extends Record<string, any>>(options: UseMana
     return [...toQueryItems(conditions.value), ...(extraItems?.() ?? [])];
   }
 
+  /**
+   * Top-level request params built from the `param` fields of the filter
+   *
+   * A `param` field (e.g. `showRequestContent`) is not a WHERE condition, so its value is merged
+   * into the request body instead of `items`.
+   */
+  function buildParams() {
+    const result: Record<string, string> = {};
+
+    conditions.value.forEach(condition => {
+      if (condition.param && isConditionFilled(condition)) {
+        result[condition.prop] = condition.values[0];
+      }
+    });
+
+    return result;
+  }
+
   const params = reactive<Api.SystemManage.PageQo>({
     page: 1,
     size: 10,
-    items: [],
+    // the seeded default conditions must be part of the first search
+    items: buildItems(),
     orders: toOrderItems(sort.value)
   });
 
   const table = useNaivePaginatedTable<PageResponse<Row>, Row>({
     tableKey,
     immediate,
-    api: () => api(params),
+    api: () => api(Object.assign({}, params, buildParams())),
     transform: response => {
       const { data: resData, error } = response;
 
@@ -157,6 +191,8 @@ export function useManageTable<Row extends Record<string, any>>(options: UseMana
     params,
     /** assemble the backend conditions, `items` plus the fixed ones */
     buildItems,
+    /** assemble the top-level request params from the `param` fields */
+    buildParams,
     handleSearch,
     handleReset
   };

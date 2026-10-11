@@ -5,6 +5,7 @@ import { useBoolean } from '@sa/hooks';
 import { fetchDictSelect, fetchFileDownload } from '@/service/api';
 import type { PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { formatFileSize, getDownloadFileName, saveBlob } from '@/utils/file';
+import { getTodayRange } from '@/utils/date';
 import { $t } from '@/locales';
 import ManageList from '@/components/advanced/manage-list.vue';
 import type { QueryField } from '@/components/advanced/query-filter/types';
@@ -35,6 +36,13 @@ onMounted(loadTagOptions);
 
 /** Search fields of the query filter */
 const searchFields = computed<QueryField[]>(() => [
+  {
+    prop: 'createTime',
+    label: $t('page.manage.file.createTime'),
+    valueType: 'date',
+    types: ['between', 'ge', 'le', 'eq'],
+    defaultValues: getTodayRange()
+  },
   { prop: 'fileName', label: $t('page.manage.file.fileName'), valueType: 'text', types: ['like', 'eq'] },
   { prop: 'fileType', label: $t('page.manage.file.fileType'), valueType: 'text', types: ['eq', 'like'] },
   {
@@ -44,13 +52,7 @@ const searchFields = computed<QueryField[]>(() => [
     types: ['eq'],
     options: tagOptions.value.map(entry => ({ label: entry.val || entry.code, value: entry.code }))
   },
-  { prop: 'creator', label: $t('page.manage.file.creator'), valueType: 'text', types: ['like'] },
-  {
-    prop: 'createTime',
-    label: $t('page.manage.file.createTime'),
-    valueType: 'date',
-    types: ['between', 'ge', 'le', 'eq']
-  }
+  { prop: 'creator', label: $t('page.manage.file.creator'), valueType: 'text', types: ['like'] }
 ]);
 
 /** tag colors of the enum-like columns */

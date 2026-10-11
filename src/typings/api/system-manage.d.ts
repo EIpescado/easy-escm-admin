@@ -421,5 +421,36 @@ declare namespace Api {
       bucket?: string;
       storeMode?: string;
     }
+
+    /** system callback record (system_callback), aligned with backend SystemCallbackTo */
+    interface Callback {
+      id: string;
+      /** callback type, a `system_callback_type` dictionary code */
+      type?: string | null;
+      /** translated label of `type`, added by the backend `@DictField` writer */
+      typeVal?: string | null;
+      /** callback name */
+      name?: string | null;
+      /** callback subject */
+      subject?: string | null;
+      /** business key the callback is linked to */
+      primaryKey?: string | null;
+      /** trace id */
+      traceId?: string | null;
+      /** request payload, only returned when the query sets `showRequestContent` */
+      requestContent?: string | null;
+      /** response payload, only returned when the query sets `showResponseContent` */
+      responseContent?: string | null;
+      /** whether the callback succeeded */
+      success?: boolean | null;
+      /** request time */
+      requestTime?: string | null;
+      /** request cost in milliseconds */
+      requestCost?: string | null;
+      creatorId?: string | null;
+      creator?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+    }
   }
 }

@@ -343,6 +343,9 @@ declare namespace App {
           upload: string;
           download: string;
         };
+        callback: {
+          reExecute: string;
+        };
       };
       common: {
         action: string;
@@ -720,6 +723,25 @@ declare namespace App {
               uploading: string;
               merging: string;
             };
+          };
+          callback: {
+            id: string;
+            type: string;
+            name: string;
+            success: string;
+            successYes: string;
+            successNo: string;
+            subject: string;
+            primaryKey: string;
+            traceId: string;
+            creator: string;
+            requestTime: string;
+            requestContent: string;
+            responseContent: string;
+            showRequestContent: string;
+            showResponseContent: string;
+            reExecuteConfirm: string;
+            reExecuteSuccess: string;
           };
         };
         home: {

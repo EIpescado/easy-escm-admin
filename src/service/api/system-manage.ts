@@ -350,3 +350,8 @@ export function fetchFileDownload(ids: string[]) {
     timeout: FILE_TRANSFER_TIMEOUT
   });
 }
+
+/** re-execute the given callback records */
+export function fetchCallbackReExecute(ids: string[]) {
+  return request<string>({ url: '/system/callback/reExecute', method: 'post', data: ids });
+}

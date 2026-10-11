@@ -30,6 +30,9 @@ const local: App.I18n.Schema = {
     file: {
       upload: '上传',
       download: '下载'
+    },
+    callback: {
+      reExecute: '重新回调'
     }
   },
   common: {
@@ -265,6 +268,7 @@ const local: App.I18n.Schema = {
     manage_menu: '菜单管理',
     manage_dict: '字典管理',
     manage_file: '文件管理',
+    manage_callback: '回调记录',
     'manage_user-dict': '用户字典',
     'manage_user-detail': '用户详情'
   },
@@ -475,6 +479,25 @@ const local: App.I18n.Schema = {
           uploading: '正在上传分片 {percent}%',
           merging: '正在合并分片…'
         }
+      },
+      callback: {
+        id: '回调ID',
+        type: '回调类型',
+        name: '回调名称',
+        success: '回调结果',
+        successYes: '成功',
+        successNo: '失败',
+        subject: '回调主体',
+        primaryKey: '关联单号',
+        traceId: 'Trace ID',
+        creator: '触发人',
+        requestTime: '请求时间',
+        requestContent: '请求参数',
+        responseContent: '响应结果',
+        showRequestContent: '显示请求参数',
+        showResponseContent: '显示响应结果',
+        reExecuteConfirm: '确认重新回调选中的 {count} 条记录？',
+        reExecuteSuccess: '已触发重新回调'
       }
     },
     home: {

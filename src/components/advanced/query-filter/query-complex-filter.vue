@@ -79,9 +79,13 @@ const actionInline = computed(() => slots.value.length + 1 <= capacity.value);
 
 const conditionMap = computed(() => new Map(model.value.map(condition => [condition.prop, condition])));
 
-/** Create the condition of a slot, carrying the props merged into the keyword one */
+/** Create the condition of a slot, carrying the default values and the props merged into the keyword one */
 function createSlotCondition(slot: QueryFieldSlot) {
-  return createCondition(slot.field, { type: getEffectiveType(slot.field), fastProps: slot.fastProps });
+  return createCondition(slot.field, {
+    type: getEffectiveType(slot.field),
+    values: slot.field.defaultValues ?? [],
+    fastProps: slot.fastProps
+  });
 }
 
 /** Pair every slot with its condition */
