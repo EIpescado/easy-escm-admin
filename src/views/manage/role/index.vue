@@ -5,14 +5,7 @@ import { NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { usePageButtons, type PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { useSvgIcon } from '@/hooks/common/icon';
-import {
-  fetchBindRoleMenu,
-  fetchGetMenuWholeTree,
-  fetchRoleExport,
-  fetchRoleList,
-  fetchRoleMenuIds,
-  fetchToggleRoleState
-} from '@/service/api';
+import { fetchBindRoleMenu, fetchGetMenuWholeTree, fetchRoleMenuIds, fetchToggleRoleState } from '@/service/api';
 import { roleStateOptions, roleStateRecord } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
 import {
@@ -410,8 +403,8 @@ async function handleSubmitted() {
       ref="listRef"
       table-key="manage_role"
       class="min-w-0 min-h-0 flex-[6]"
-      :api="fetchRoleList"
-      :export-api="fetchRoleExport"
+      url="/system/role/search"
+      exportable
       :fields="searchFields"
       :columns="getColumns"
       :button-rules="buttonStateRules"

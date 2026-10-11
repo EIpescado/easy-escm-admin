@@ -26,6 +26,10 @@ const local: App.I18n.Schema = {
       create: 'Create Button',
       copy: 'Copy Button',
       edit: 'Edit Button'
+    },
+    file: {
+      upload: 'Upload',
+      download: 'Download'
     }
   },
   common: {
@@ -264,6 +268,7 @@ const local: App.I18n.Schema = {
     manage_role: 'Role',
     manage_menu: 'Menu',
     manage_dict: 'Dictionary',
+    manage_file: 'File',
     'manage_user-dict': 'User Dictionary',
     'manage_user-detail': 'User Detail'
   },
@@ -448,6 +453,33 @@ const local: App.I18n.Schema = {
         selectDict: 'Select a dictionary on the left',
         searchDict: 'Type a dictionary code or name',
         checkDict: 'Check the dictionaries to remove first'
+      },
+      file: {
+        id: 'File ID',
+        fileName: 'File Name',
+        fileType: 'File Type',
+        fileSize: 'File Size',
+        fileTag: 'File Tag',
+        storeMode: 'Store Mode',
+        bucket: 'Bucket',
+        filePath: 'File Path',
+        creator: 'Uploader',
+        createTime: 'Upload Time',
+        uploadTitle: 'Upload File',
+        file: 'File',
+        selectFile: 'Select File',
+        selectFileTag: 'Please select a file tag',
+        selectFileRequired: 'Please select a file to upload',
+        uploadSuccess: 'Upload Success',
+        uploadTip:
+          'Files up to {size} are uploaded directly, larger ones are uploaded in chunks (instant upload & resume supported)',
+        downloadFailed: 'Download failed',
+        phase: {
+          hashing: 'Computing file fingerprint…',
+          checking: 'Checking the file…',
+          uploading: 'Uploading chunks {percent}%',
+          merging: 'Merging chunks…'
+        }
       }
     },
     home: {

@@ -335,5 +335,91 @@ declare namespace Api {
       allDict?: boolean;
       dictIds?: string[];
     }
+
+    /** system file (system_file), aligned with backend SystemFileTo / SystemFileDto */
+    interface SystemFile {
+      id: string;
+      /** storage mode: local / FTP / minio / oos */
+      storeMode?: string | null;
+      /** storage bucket */
+      bucket?: string | null;
+      /** original file name */
+      fileName: string;
+      /** file type (extension) */
+      fileType?: string | null;
+      /** size in bytes (backend `Long`, serialized as a numeric string) */
+      fileSize?: string | null;
+      /** storage path, without prefix */
+      filePath?: string | null;
+      /** file tag, refers to the `system_file_tag` dictionary */
+      fileTag?: string | null;
+      /** uploader id */
+      creatorId?: string | null;
+      /** uploader name */
+      creator?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+    }
+
+    /** single-file upload form of `/system/file/upload` (multipart) */
+    interface FileUploadForm {
+      file: File;
+      /** file tag, required */
+      fileTag: string;
+      /** custom file name, defaults to the original one */
+      fileName?: string;
+      bucket?: string;
+      storeMode?: string;
+    }
+
+    /** chunk check form, aligned with backend SystemFileChunkCheckFo */
+    interface FileChunkCheckForm {
+      /** file unique id, the MD5 of the content (enables instant upload & resume) */
+      identifier: string;
+      fileName?: string;
+      /** total size in bytes */
+      fileSize?: number;
+      totalChunks?: number;
+    }
+
+    /** chunk check result, aligned with backend SystemFileChunkDto */
+    interface FileChunkCheck {
+      identifier: string;
+      /** true when the file already exists (instant upload) or was merged */
+      uploaded?: boolean;
+      /** the matched file when `uploaded` is true */
+      file?: SystemFile | null;
+      /** already uploaded chunk indexes, ascending, for resume */
+      uploadedChunks?: number[] | null;
+      /** recommended chunk size in bytes (backend `Long`, serialized as a numeric string) */
+      chunkSize?: string | null;
+      totalChunks?: number | null;
+    }
+
+    /** single chunk upload form of `/system/file/uploadChunk` */
+    interface FileChunkForm {
+      file: Blob;
+      identifier: string;
+      /** 0-based chunk index */
+      chunkIndex: number;
+      totalChunks: number;
+      /** file tag, required */
+      fileTag: string;
+      fileName?: string;
+    }
+
+    /** chunk merge form, aligned with backend SystemFileChunkMergeFo */
+    interface FileChunkMergeForm {
+      identifier: string;
+      /** original file name, required */
+      fileName: string;
+      totalChunks: number;
+      /** file tag, required */
+      fileTag: string;
+      /** total size in bytes, for validation */
+      fileSize?: number;
+      bucket?: string;
+      storeMode?: string;
+    }
   }
 }

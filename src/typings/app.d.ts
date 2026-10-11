@@ -339,6 +339,10 @@ declare namespace App {
           copy: string;
           edit: string;
         };
+        file: {
+          upload: string;
+          download: string;
+        };
       };
       common: {
         action: string;
@@ -690,6 +694,32 @@ declare namespace App {
             selectDict: string;
             searchDict: string;
             checkDict: string;
+          };
+          file: {
+            id: string;
+            fileName: string;
+            fileType: string;
+            fileSize: string;
+            fileTag: string;
+            storeMode: string;
+            bucket: string;
+            filePath: string;
+            creator: string;
+            createTime: string;
+            uploadTitle: string;
+            file: string;
+            selectFile: string;
+            selectFileTag: string;
+            selectFileRequired: string;
+            uploadSuccess: string;
+            uploadTip: string;
+            downloadFailed: string;
+            phase: {
+              hashing: string;
+              checking: string;
+              uploading: string;
+              merging: string;
+            };
           };
         };
         home: {

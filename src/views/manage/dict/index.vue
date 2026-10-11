@@ -4,14 +4,7 @@ import { NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { FORM_DETAIL_LOAD_DELAY, sleep } from '@/hooks/common/form';
 import { usePageButtons, type PageButtonStateRules } from '@/hooks/business/page-buttons';
-import {
-  fetchDictDetail,
-  fetchDictEntryDetail,
-  fetchDictEntrySearch,
-  fetchDictSearch,
-  fetchToggleDictEntryState,
-  fetchToggleDictState
-} from '@/service/api';
+import { fetchDictDetail, fetchDictEntryDetail, fetchToggleDictEntryState, fetchToggleDictState } from '@/service/api';
 import { enableStateOptions } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
@@ -439,7 +432,7 @@ async function handleEntrySubmitted() {
       table-key="manage_dict"
       :title="$t('route.manage_dict')"
       class="min-w-0 min-h-0 flex-[5]"
-      :api="fetchDictSearch"
+      url="/system/dict/search"
       :fields="dictSearchFields"
       :columns="getDictColumns"
       :button-rules="dictButtonRules"
@@ -453,7 +446,7 @@ async function handleEntrySubmitted() {
       table-key="manage_dict_entry"
       :title="entryTitle"
       class="min-w-0 min-h-0 flex-[5]"
-      :api="fetchDictEntrySearch"
+      url="/system/dictEntry/search"
       :immediate="false"
       :extra-items="entryExtraItems"
       :before-search="canSearchEntries"

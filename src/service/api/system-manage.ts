@@ -1,18 +1,19 @@
 import { request } from '../request';
 
-/** get user list */
-export function fetchUserList(params: Api.SystemManage.PageQo) {
-  return request<Api.SystemManage.PageResult<Api.SystemManage.User>>({
-    url: '/system/user/search',
-    method: 'post',
-    data: params
-  });
+/**
+ * Paged search shared by every `/system/**` list
+ *
+ * They all take a `PageQo` and return a `PageResult<Row>`; only the url and the row type differ, so
+ * the lists call this generic helper instead of each declaring its own fetch.
+ */
+export function fetchPageSearch<Row>(url: string, params: Api.SystemManage.PageQo) {
+  return request<Api.SystemManage.PageResult<Row>>({ url, method: 'post', data: params });
 }
 
-/** export user list as xlsx, the backend returns a file stream when `export` is true */
-export function fetchUserExport(params: Api.SystemManage.PageQo) {
+/** export a paged list as xlsx, the backend returns a file stream when `export` is true */
+export function fetchPageExport(url: string, params: Api.SystemManage.PageQo) {
   return request<Blob, 'blob'>({
-    url: '/system/user/search',
+    url,
     method: 'post',
     data: { ...params, export: true },
     responseType: 'blob'
@@ -50,25 +51,6 @@ export function fetchToggleUserState(id: string, enable: boolean) {
     url: enable ? '/system/user/enable' : '/system/user/disable',
     method: 'post',
     data: { id }
-  });
-}
-
-/** get role list */
-export function fetchRoleList(params: Api.SystemManage.PageQo) {
-  return request<Api.SystemManage.PageResult<Api.SystemManage.Role>>({
-    url: '/system/role/search',
-    method: 'post',
-    data: params
-  });
-}
-
-/** export role list as xlsx, the backend returns a file stream when `export` is true */
-export function fetchRoleExport(params: Api.SystemManage.PageQo) {
-  return request<Blob, 'blob'>({
-    url: '/system/role/search',
-    method: 'post',
-    data: { ...params, export: true },
-    responseType: 'blob'
   });
 }
 
@@ -229,15 +211,6 @@ export function fetchToggleDictState(id: string, enable: boolean) {
   });
 }
 
-/** dictionary entry search (paged) */
-export function fetchDictEntrySearch(data: Api.SystemManage.PageQo) {
-  return request<Api.SystemManage.PageResult<Api.SystemManage.DictEntry>>({
-    url: '/system/dictEntry/search',
-    method: 'post',
-    data
-  });
-}
-
 /**
  * Get a single dictionary entry detail
  *
@@ -302,4 +275,78 @@ export function fetchBindUserAllDict(data: Api.SystemManage.UserDictForm) {
 /** revoke the all-dictionaries grant of a user */
 export function fetchRemoveUserAllDict(data: Api.SystemManage.UserDictForm) {
   return request<string>({ url: '/system/dict/removeUserAllDict', method: 'post', data });
+}
+
+/**
+ * Entries of a dictionary
+ *
+ * Used for the enum-like select options of a page, e.g. the `system_file_tag` tags of the file
+ * upload.
+ */
+export function fetchDictSelect(dictCode: string) {
+  return request<Api.SystemManage.DictEntry[]>({ url: '/system/dict/select', method: 'get', params: { dictCode } });
+}
+
+/** uploads (and downloads) can be large, so they get a much longer timeout than the default 10s */
+const FILE_TRANSFER_TIMEOUT = 10 * 60 * 1000;
+
+/** simple upload of a small file; the file tag is required */
+export function fetchFileUpload(data: Api.SystemManage.FileUploadForm) {
+  const formData = new FormData();
+  formData.append('file', data.file);
+  formData.append('fileTag', data.fileTag);
+  if (data.fileName) formData.append('fileName', data.fileName);
+  if (data.bucket) formData.append('bucket', data.bucket);
+  if (data.storeMode) formData.append('storeMode', data.storeMode);
+
+  return request<Api.SystemManage.SystemFile>({
+    url: '/system/file/upload',
+    method: 'post',
+    data: formData,
+    timeout: FILE_TRANSFER_TIMEOUT
+  });
+}
+
+/** check a chunked upload: instant-upload (秒传) hit and already uploaded chunks, for resume */
+export function fetchFileCheckChunk(data: Api.SystemManage.FileChunkCheckForm) {
+  return request<Api.SystemManage.FileChunkCheck>({ url: '/system/file/checkChunk', method: 'post', data });
+}
+
+/** upload a single chunk, its size must not exceed the `chunkSize` returned by `checkChunk` */
+export function fetchFileChunkUpload(data: Api.SystemManage.FileChunkForm) {
+  const formData = new FormData();
+  formData.append('file', data.file, data.fileName || `chunk-${data.chunkIndex}`);
+  formData.append('identifier', data.identifier);
+  formData.append('chunkIndex', String(data.chunkIndex));
+  formData.append('totalChunks', String(data.totalChunks));
+  formData.append('fileTag', data.fileTag);
+  if (data.fileName) formData.append('fileName', data.fileName);
+
+  return request<string>({
+    url: '/system/file/uploadChunk',
+    method: 'post',
+    data: formData,
+    timeout: FILE_TRANSFER_TIMEOUT
+  });
+}
+
+/** merge the uploaded chunks into the final file */
+export function fetchFileMergeChunk(data: Api.SystemManage.FileChunkMergeForm) {
+  return request<Api.SystemManage.SystemFile>({
+    url: '/system/file/mergeChunk',
+    method: 'post',
+    data,
+    timeout: FILE_TRANSFER_TIMEOUT
+  });
+}
+
+/** download files by id; the backend zips them when more than one id is given */
+export function fetchFileDownload(ids: string[]) {
+  return request<Blob, 'blob'>({
+    url: '/system/file/download',
+    method: 'post',
+    data: ids,
+    responseType: 'blob',
+    timeout: FILE_TRANSFER_TIMEOUT
+  });
 }

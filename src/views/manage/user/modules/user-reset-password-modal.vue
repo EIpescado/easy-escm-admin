@@ -82,6 +82,9 @@ async function handleSubmit() {
     :rules="rules"
     :submit="handleSubmit"
   >
+    <NAlert class="col-span-2 mb-8px" type="info" :bordered="false">
+      {{ $t('page.manage.user.resetPasswordTip') }}
+    </NAlert>
     <NFormItem v-if="username" class="col-span-2">
       <template #label>
         <FormLabel :label="$t('page.manage.user.username')" />
@@ -110,7 +113,6 @@ async function handleSubmit() {
         :placeholder="$t('page.manage.user.confirmPasswordPlaceholder')"
       />
     </NFormItem>
-    <div class="col-span-2 text-12px text-gray-400">{{ $t('page.manage.user.resetPasswordTip') }}</div>
   </FormDialog>
 </template>
 

@@ -9,6 +9,7 @@ import {
   type PageButtonStateRules
 } from '@/hooks/business/page-buttons';
 import { useManageTable } from '@/hooks/business/manage-table';
+import { fetchPageExport, fetchPageSearch } from '@/service/api';
 import { getTableOperateColumnWidth } from '@/utils/table';
 import { $t } from '@/locales';
 import QueryFilter from './query-filter/index.vue';
@@ -34,13 +35,23 @@ type PageResponse = FlatResponseData<unknown, Api.SystemManage.PageResult<Row>>;
 interface Props {
   /** unique key persisting the column checks and the sort of this list */
   tableKey: string;
-  /** backend search api, called with the assembled `PageQo` */
-  api: (params: Api.SystemManage.PageQo) => Promise<PageResponse>;
+  /**
+   * Backend search url
+   *
+   * Every `/system/**` list shares the same `PageQo` → `PageResult` shape, so the component builds
+   * the request itself and the page only declares the endpoint.
+   */
+  url: string;
   /** fields rendered by the query filter */
   fields: QueryField[];
   /** data columns; the operate and selection columns are added by the component */
   columns: () => NaiveUI.TableColumn<Row>[];
-  /** card title, e.g. the route name */
+  /**
+   * Card title
+   *
+   * Empty unless a page declares one, and only the pages that need it (e.g. two lists side by side,
+   * like the dictionary page) should pass it; a single list leaves it unset.
+   */
   title?: string;
   /** whether the list offers a custom sort, shown next to the pagination */
   sortable?: boolean;
@@ -48,8 +59,15 @@ interface Props {
   extraItems?: () => Api.SystemManage.QueryItem[];
   /** whether to fetch on creation */
   immediate?: boolean;
-  /** export api; the visible columns are appended to the params (the api adds `export: true`) */
-  exportApi?: (params: Api.SystemManage.PageQo) => Promise<FlatResponseData<any, Blob>>;
+  /**
+   * Whether the list offers an export
+   *
+   * It posts the same `url` with `export: true` and the visible columns as `exportItems`, and the
+   * backend answers with an xlsx stream.
+   *
+   * @default false
+   */
+  exportable?: boolean;
   /** prepend a selection column */
   selection?: boolean;
   /** row key of the table, defaults to the `id` field */
@@ -96,7 +114,7 @@ const props = withDefaults(defineProps<Props>(), {
   sortable: false,
   extraItems: undefined,
   immediate: true,
-  exportApi: undefined,
+  exportable: false,
   selection: false,
   rowKey: undefined,
   rowProps: undefined,
@@ -178,7 +196,8 @@ const {
   reloadColumns
 } = useManageTable<Row>({
   tableKey: props.tableKey,
-  api: props.api,
+  // every `/system/**` list shares the same request shape, only the url differs
+  api: (query: Api.SystemManage.PageQo): Promise<PageResponse> => fetchPageSearch<Row>(props.url, query),
   sortable: props.sortable,
   immediate: props.immediate,
   extraItems: props.extraItems,
@@ -247,13 +266,9 @@ async function reload() {
   await getData();
 }
 
-/** export the visible columns through the page export api */
-function handleExport(): Promise<FlatResponseData<any, Blob>> {
-  const api = props.exportApi;
-
-  if (!api) return Promise.reject(new Error('no export api'));
-
-  return api({ ...params, exportItems: exportItems.value });
+/** export the visible columns of this list as an xlsx stream */
+function handleExport() {
+  return fetchPageExport(props.url, { ...params, exportItems: exportItems.value });
 }
 
 /**
@@ -272,7 +287,10 @@ defineExpose({
   search,
   handleReset,
   data,
-  loading
+  loading,
+  /** rows checked in the table, e.g. for a toolbar action acting on the selection */
+  selectedRows,
+  checkedRowKeys
 });
 </script>
 
@@ -291,7 +309,7 @@ defineExpose({
                 @select="handleToolbarSelect"
               />
             </template>
-            <template v-if="exportApi" #export>
+            <template v-if="exportable" #export>
               <TableExportButton :api="handleExport" />
             </template>
           </TableHeaderOperation>

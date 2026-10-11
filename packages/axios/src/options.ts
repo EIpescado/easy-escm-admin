@@ -45,9 +45,9 @@ export function createAxiosConfig(config?: Partial<CreateAxiosDefaults>) {
 
   const axiosConfig: CreateAxiosDefaults = {
     timeout: TEN_SECONDS,
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    // No hardcoded `Content-Type`: axios sets `application/json` itself for object bodies, while a
+    // default JSON type makes its `transformRequest` serialize a `FormData` into JSON
+    // (`formDataToJSON`) instead of leaving it multipart for the browser to bound.
     validateStatus: isHttpSuccess,
     // keep the raw text so it can be parsed with `parseJson`, which preserves Long ids
     transformResponse: [data => data],

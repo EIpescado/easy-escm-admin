@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { AxiosResponse } from 'axios';
 import type { FlatResponseData } from '@sa/axios';
+import { getDownloadFileName, saveBlob } from '@/utils/file';
 import { $t } from '@/locales';
 
 defineOptions({
@@ -24,37 +24,6 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const loading = ref(false);
-
-/** Read the file name from the `content-disposition` header */
-function getFileName(response?: AxiosResponse) {
-  const disposition = response?.headers?.['content-disposition'] as string | undefined;
-  const matched = disposition
-    ?.match(/filename\*?=(?:UTF-8'')?([^;]+)/i)?.[1]
-    ?.replace(/"/g, '')
-    .trim();
-
-  if (!matched) return `export-${Date.now()}.xlsx`;
-
-  try {
-    return decodeURIComponent(matched.replace(/\+/g, ' '));
-  } catch {
-    return matched;
-  }
-}
-
-/** Trigger a browser download for the blob */
-function saveBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  URL.revokeObjectURL(url);
-}
 
 async function handleExport() {
   if (loading.value) return;
@@ -81,7 +50,7 @@ async function handleExport() {
       return;
     }
 
-    saveBlob(data, getFileName(result.response));
+    saveBlob(data, getDownloadFileName(result.response, `export-${Date.now()}.xlsx`));
   } finally {
     loading.value = false;
   }

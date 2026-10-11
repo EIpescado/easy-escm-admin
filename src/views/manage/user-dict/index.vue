@@ -4,13 +4,7 @@ import { NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { getTableScrollX } from '@/hooks/common/table';
 import { usePageButtonState, usePageButtons, type PageButtonStateRules } from '@/hooks/business/page-buttons';
-import {
-  fetchBindUserAllDict,
-  fetchRemoveUserAllDict,
-  fetchRemoveUserDict,
-  fetchUserDictDetail,
-  fetchUserList
-} from '@/service/api';
+import { fetchBindUserAllDict, fetchRemoveUserAllDict, fetchRemoveUserDict, fetchUserDictDetail } from '@/service/api';
 import { userStateOptions, userStateRecord } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
@@ -301,7 +295,7 @@ function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
       ref="listRef"
       table-key="manage_user_dict"
       class="min-w-0 min-h-0 flex-[5]"
-      :api="fetchUserList"
+      url="/system/user/search"
       :fields="searchFields"
       :columns="getColumns"
       :row-class-name="rowClassName"

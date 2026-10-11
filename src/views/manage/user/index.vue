@@ -5,7 +5,7 @@ import { NButton, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { FORM_DETAIL_LOAD_DELAY, sleep } from '@/hooks/common/form';
 import type { PageButtonStateRules } from '@/hooks/business/page-buttons';
-import { fetchToggleUserState, fetchUserDetail, fetchUserExport, fetchUserList } from '@/service/api';
+import { fetchToggleUserState, fetchUserDetail } from '@/service/api';
 import { userStateOptions, userStateRecord } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
@@ -217,8 +217,8 @@ async function handleSubmitted() {
       ref="listRef"
       table-key="manage_user"
       class="min-h-0 flex-1"
-      :api="fetchUserList"
-      :export-api="fetchUserExport"
+      url="/system/user/search"
+      exportable
       :fields="searchFields"
       :columns="getColumns"
       :button-rules="buttonStateRules"

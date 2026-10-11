@@ -50,13 +50,13 @@
 
 ## 系统管理页（本分支新增）
 
-- 页面在 `src/views/manage/{user,user-detail,role,menu,dict,user-dict}/`，路由名固定为 `manage_user` / `manage_role` / `manage_menu` / `manage_dict` / `manage_user-dict`（见 `src/router/elegant/imports.ts`）。
+- 页面在 `src/views/manage/{user,user-detail,role,menu,dict,user-dict,file}/`，路由名固定为 `manage_user` / `manage_role` / `manage_menu` / `manage_dict` / `manage_user-dict` / `manage_file`（见 `src/router/elegant/imports.ts`）。
 - 用户详情是独立页面 `src/views/manage/user-detail/[id].vue`（路由 `manage_user-detail`，路径 `/manage/user-detail/:id`，参数经 `props.id` 注入），由用户列表的「详情」行按钮进入。dynamic 模式下需后端菜单提供对应节点（建议 `hideInMenu: true`）才会注册该路由。
-- 按钮权限由后端菜单 `meta.buttons` 下发，按 `position` 分组：`top`（工具栏）/ `row`（行操作）/ `left-top`（右侧面板工具栏）/ `left-row`（右侧面板行操作）；用 `usePageButtons()`（`src/hooks/business/page-buttons.ts`）读取，`click` 动作映射到 i18n，未知动作回退后端 `name`。
+- 按钮权限由后端菜单 `meta.buttons` 下发，按 `position` 分组：`top`（工具栏）/ `row`（行操作）/ `left-top`（右侧面板工具栏）/ `left-row`（右侧面板行操作）；用 `usePageButtons()`（`src/hooks/business/page-buttons.ts`）读取，`click` 动作映射到 i18n，未知动作回退后端 `name`。**页面不允许写本地兜底按钮**，所有按钮必须由后端菜单动态下发（`click` 决定前端行为，`i18nKey` 决定文案）。
 - 按钮可用性可配置：页面用 `usePageButtonState<Row>(rules)`（同文件）声明规则，规则以 `click` 为 key、接收 `{ rows, position }` 并返回 `true` 表示禁用（top 的 `rows` 是勾选行，row 的 `rows` 是当前行）。行按钮经 `TableRowOperation` 的 `disabled`、工具栏按钮经 `TableToolbarButtons` 的 `:disabled` 生效。
 - 列表查询走后端动态查询模型：`PageQo` 的 `items`（条件）/ `orders`（排序）/ `exportItems`（导出列），与后端 `BaseQo` 对齐（`src/typings/api/system-manage.d.ts`），前端在 `src/components/advanced/query-filter/` 组装。
 - 导出复用同一 search 接口并带 `export: true`，后端返回 xlsx 流（`responseType: 'blob'`）。
-- 列表页统一走 `<ManageList>`（`src/components/advanced/manage-list.vue`，内部用 `useManageTable()`）。页面只给 `tableKey` / `api` / `fields` / `columns`，外加可选的 `exportApi` / `selection` / `sortable` / `extraItems` / `immediate` / `rowAction` / `buttonRules` / `buttons` / `title`；查询栏、卡片、工具栏按钮、导出、列设置、刷新、排序、分页、行高样式都由组件提供，**页面不要再手写 `QueryFilter` / `NCard` / `TableHeaderOperation` / 操作列**。`rowAction` 会在最左侧生成由路由 `row` 按钮驱动的操作列并按 `buttonRules` 置灰，`v-model`/`ref` 可拿 `getData` 刷新。user 页是样板；role / dict / user-dict 尚未迁移。
+- 列表页统一走 `<ManageList>`（`src/components/advanced/manage-list.vue`，内部用 `useManageTable()`）。页面只给 `tableKey` / `url` / `fields` / `columns`，外加可选的 `exportable` / `selection` / `sortable` / `extraItems` / `immediate` / `rowAction` / `buttonRules` / `buttons` / `title`；查询栏、卡片、工具栏按钮、导出、列设置、刷新、排序、分页、行高样式都由组件提供，**页面不要再手写 `QueryFilter` / `NCard` / `TableHeaderOperation` / 操作列**。`rowAction` 会在最左侧生成由路由 `row` 按钮驱动的操作列并按 `buttonRules` 置灰，`v-model`/`ref` 可拿 `getData` 刷新。所有 `/system/**` 列表共用同一「`PageQo` 进 / `PageResult` 出」形状，故组件直接用 `url` 走 `fetchPageSearch()` / `fetchPageExport()`（`src/service/api/system-manage.ts`），页面不必再为每个资源写 fetch / export。**`title` 不显式声明时卡片无标题**，不要默认填路由名；只有并排多列表（如字典页的主表/明细）才传。
 - `useManageTable()`（`src/hooks/business/manage-table.ts`）是组件底层的组合式函数：传 `tableKey` / `api` / `columns`（可选 `extraItems` 固定条件、`immediate`、`sortable`），返回 `conditions`、`tablePagination`、`exportItems`、`params`、`buildItems`、`handleSearch` / `handleReset` 等；**菜单页是特例**（前端本地过滤 + 无分页，不用它）。
 - `sortable` 默认 `false`，只有 user / role 开启（分页条右侧自动挂 `QuerySortButton`）。排序项与列显隐按 `tableKey` 存 localStorage，`setTableSetting` 按 key 合并，因此两者互不覆盖。
 - 排序字段与导出字段规则不同（`src/utils/table.ts`）：`getSortFields()` 返回**所有**数据列（含列设置里未勾选 / 隐藏的列——隐藏不等于不能排序），`getExportItems()` 只取**已勾选且可见**的列。
@@ -64,12 +64,14 @@
 - **字典管理** `manage_dict`：字典主表 + 字典明细两个列表（左右布局、各自查询栏、明细按 `pid` 与主表联动），接口 `/system/dict/**`、`/system/dictEntry/**`。
 - **用户字典** `manage_user-dict`：左用户 + 右「拥有字典」列表。右侧数据**直接来自** `/system/dict/userDictDetail` 返回的 `dictList`（后端 `SystemUserDictVo` 的字段就叫 `dictList`，前端类型曾被误写成 `dictIds`），不需要拉全量字典。右侧工具栏的 4 个按钮由后端菜单下发，`click` 分别是 `addUserDict`（弹窗里**搜索**字典——用 `fast` 同时搜 code/name——并多选，不做全量加载）/ `removeUserDict`（作用于表格勾选行）/ `bindUserAllDict` / `removeUserAllDict`。
 - **权限树**（角色管理右侧）：数据源用 `/system/menu/wholeTree`；已绑定项取自 `/system/role/menuAndButtonIds`（含菜单 + 按钮 id），保存走 `/system/role/bind`，按 `menuIds` / `buttonIds` 分别提交并自动补全被勾选节点的上级菜单；树按 `meta.i18nKey` 优先、回退 `name` 显示，并用 `getMenuNodeType`（`src/utils/menu.ts`）区分 root/目录/菜单/按钮。
+- **文件管理** `manage_file`（`src/views/manage/file/`）：列表用 `ManageList`，`url="/system/file/search"`；文件标签列与标签下拉取自字典 `system_file_tag`（`fetchDictSelect(dictCode)` → `GET /system/dict/select`）。上传在 `modules/file-upload-modal.vue`：≤5M 走 `POST /system/file/upload`，更大的自动分片——`getFileMd5()`（`src/utils/file.ts`，crypto-js 增量计算，作 `identifier` 以支持秒传/断点续传）→ `checkChunk` → `uploadChunk`（单片 ≤ 后端 `chunkSize`，返回的 `uploadedChunks` 用于跳过续传）→ `mergeChunk`。下载走 `POST /system/file/download`（body 为 id 数组，多文件后端自动打 zip），blob 保存复用 `src/utils/file.ts` 的 `getDownloadFileName` / `saveBlob`（`TableExportButton` 也用它）。工具栏按钮全部由后端菜单 `top` 下发（`click` 为 `upload` / `download`，`i18nKey` 为 `system.file.upload` / `system.file.download`），页面无本地兜底按钮。
 
 ## 数据约定（重要）
 
 - 后端 **Long 一律以字符串返回**；`@sa/axios` 已全局用自定义 JSON 解析**保留大整数为字符串**（`packages/axios/src/{options,shared}.ts`），避免精度丢失。
 - 枚举字段经全局 `BaseEnum2KeyWriter` 输出 **两个字段**：`state`（文案，如「启用」）与 `stateEnum`（枚举名，如 `ON`）。判断状态请用 `stateEnum`。
 - 列表查询字段用动态 `items`（`prop` 为实体属性名，如 `pid`、`roleCode`、`state`）。
+- **multipart 上传的坑**：axios 的默认 `transformRequest` 在 data 为 FormData **且** content-type 含 `application/json` 时，会把它 `JSON.stringify(formDataToJSON(data))`，于是「multipart 上传」实际发成了 JSON（`{"file":{},"fileTag":"..."}`）。因此 `packages/axios/src/options.ts` 的 `createAxiosConfig` **不再写死 `Content-Type: application/json`**：对象体由 axios 自动加 JSON 头，FormData 保持原样、由浏览器补 `boundary`。给上传请求单独设 JSON content-type 会重新踩坑。
 
 ## 项目结构
 

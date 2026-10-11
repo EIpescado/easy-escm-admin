@@ -26,6 +26,10 @@ const local: App.I18n.Schema = {
       create: '新增按钮',
       copy: '复制按钮',
       edit: '编辑按钮'
+    },
+    file: {
+      upload: '上传',
+      download: '下载'
     }
   },
   common: {
@@ -260,6 +264,7 @@ const local: App.I18n.Schema = {
     manage_role: '角色管理',
     manage_menu: '菜单管理',
     manage_dict: '字典管理',
+    manage_file: '文件管理',
     'manage_user-dict': '用户字典',
     'manage_user-detail': '用户详情'
   },
@@ -444,6 +449,32 @@ const local: App.I18n.Schema = {
         selectDict: '请在左侧选择字典',
         searchDict: '请输入字典编码或名称',
         checkDict: '请先勾选要移除的字典'
+      },
+      file: {
+        id: '文件ID',
+        fileName: '文件名称',
+        fileType: '文件类型',
+        fileSize: '文件大小',
+        fileTag: '文件标签',
+        storeMode: '存储方式',
+        bucket: '存储桶',
+        filePath: '文件路径',
+        creator: '上传人',
+        createTime: '上传时间',
+        uploadTitle: '上传文件',
+        file: '文件',
+        selectFile: '选择文件',
+        selectFileTag: '请选择文件标签',
+        selectFileRequired: '请选择要上传的文件',
+        uploadSuccess: '上传成功',
+        uploadTip: '文件不超过 {size} 时直接上传，超过则自动分片上传（支持秒传与断点续传）',
+        downloadFailed: '下载失败',
+        phase: {
+          hashing: '正在计算文件指纹…',
+          checking: '正在检查文件…',
+          uploading: '正在上传分片 {percent}%',
+          merging: '正在合并分片…'
+        }
       }
     },
     home: {
