@@ -448,6 +448,7 @@ const local: App.I18n.Schema = {
           remark: '备注'
         },
         allDict: '全部字典',
+        boundAllDict: '已绑定全部字典',
         ownedDict: '拥有字典',
         selectUser: '请在左侧选择用户',
         selectDict: '请在左侧选择字典',

@@ -692,6 +692,7 @@ declare namespace App {
               remark: string;
             };
             allDict: string;
+            boundAllDict: string;
             ownedDict: string;
             selectUser: string;
             selectDict: string;

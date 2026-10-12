@@ -9,6 +9,7 @@ import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
 import ManageList from '@/components/advanced/manage-list.vue';
 import type { QueryField } from '@/components/advanced/query-filter/types';
+import type { ManageColumn } from '@/utils/table';
 import UserDictAddModal from './modules/user-dict-add-modal.vue';
 
 defineOptions({
@@ -69,7 +70,6 @@ const rows = computed(() => listRef.value?.data ?? []);
 
 /** selected user (left), drives the dictionaries panel */
 const activeUserId = ref('');
-const activeUserName = ref('');
 
 /** whether the selected user owns all dictionaries, it comes from the detail request */
 const allDict = ref(false);
@@ -95,10 +95,12 @@ const dictSearchFields = computed<QueryField[]>(() => [
   }
 ]);
 
-/** Data columns of the panel */
-const dictColumns = computed<NaiveUI.TableColumn<Api.SystemManage.Dict>[]>(() => [
+/** Data columns of the panel, the same fields the dictionary page shows */
+const dictColumns = computed<ManageColumn<Api.SystemManage.Dict>[]>(() => [
   { key: 'code', title: $t('page.manage.dict.code'), minWidth: 120, ellipsis: { tooltip: true } },
   { key: 'name', title: $t('page.manage.dict.name'), minWidth: 120, ellipsis: { tooltip: true } },
+  { key: 'state', title: $t('page.manage.dict.stateLabel'), align: 'center', width: 90, cell: 'enabled' },
+  { key: 'whetherAuth', title: $t('page.manage.dict.whetherAuth'), align: 'center', width: 100, cell: 'boolean' },
   { key: 'remark', title: $t('page.manage.dict.remark'), minWidth: 120, ellipsis: { tooltip: true } }
 ]);
 
@@ -109,22 +111,18 @@ function getDictColumns() {
 
 const panelListRef = ref<ManageListInstance<Api.SystemManage.Dict> | null>(null);
 
-/** the panel title, it follows the selected user */
-const panelTitle = computed(() =>
-  activeUserId.value
-    ? `${$t('page.manage.dict.ownedDict')} · ${activeUserName.value}`
-    : $t('page.manage.dict.ownedDict')
-);
-
 /** the panel search is scoped to the selected user, the Qo takes the `userId` directly */
 const panelParams = () => (activeUserId.value ? { userId: activeUserId.value } : {});
+
+/** owning every dictionary leaves nothing to search: the list only shows that flag */
+function canSearchPanel() {
+  return !allDict.value;
+}
 
 /** the user whose dictionaries are requested next; only the latest click is kept */
 let pendingUserId: string | null = null;
 /** whether a dictionary request is running */
 let dictRunning = false;
-/** the user the panel list currently shows, empty until it mounted for the first time */
-let panelUserId = '';
 
 /** load the state of the given user and reload the user scoped dictionary list */
 async function loadUserDicts(userId: string) {
@@ -144,11 +142,8 @@ async function loadUserDicts(userId: string) {
     if (activeUserId.value === userId) panelLoading.value = false;
   }
 
-  // the panel stays mounted across selections, so it must be asked to search for the new user; on
-  // the very first selection the list itself mounts and fetches, hence the guard
-  if (panelUserId) await panelListRef.value?.reload();
-
-  panelUserId = userId;
+  // the list is keyed by the user, so it must be asked to search; owning every dictionary has no list
+  if (!allDict.value) await panelListRef.value?.reload();
 }
 
 /**
@@ -185,7 +180,6 @@ function clearUserDicts() {
 
 async function selectUser(row: Api.SystemManage.User) {
   activeUserId.value = row.id;
-  activeUserName.value = row.username;
 
   // the buttons stay disabled until this user's state has been loaded
   panelLoading.value = true;
@@ -211,14 +205,18 @@ function rowProps(row: Api.SystemManage.User) {
 watch(rows, loaded => {
   if (!loaded.some(row => row.id === activeUserId.value)) {
     activeUserId.value = '';
-    activeUserName.value = '';
     clearUserDicts();
   }
 });
 
 /** reload the panel of the selected user after a binding change */
 async function reloadUserDicts() {
-  if (activeUserId.value) await requestUserDicts(activeUserId.value);
+  if (!activeUserId.value) return;
+
+  await requestUserDicts(activeUserId.value);
+
+  // the list is keyed by user, so a reload after a change has to be asked for explicitly
+  await panelListRef.value?.reload();
 }
 
 /** warn and bail out when no user is selected */
@@ -332,24 +330,25 @@ function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
       :row-props="rowProps"
     />
     <div class="min-w-0 min-h-0 flex flex-[5] flex-col gap-8px">
-      <!-- display only: the flag comes from the loaded detail, it is never toggled by hand -->
-      <NCheckbox v-if="activeUserId" :checked="allDict" disabled class="shrink-0">
-        {{ $t('page.manage.dict.allDict') }}
-      </NCheckbox>
       <ManageList
         v-if="activeUserId"
+        :key="activeUserId"
         ref="panelListRef"
         v-model:checked-row-keys="checkedDictIds"
         table-key="manage_user_dict_panel"
-        :title="panelTitle"
         class="min-h-0 flex-1"
         url="/system/dict/userDictSearch"
         :extra-params="panelParams"
+        :immediate="false"
+        :before-search="canSearchPanel"
+        :pagination-disabled="allDict"
         :fields="dictSearchFields"
         :columns="getDictColumns"
         top-button-position="left-top"
         :button-rules="dictButtonRules"
         selection
+        :empty-text="allDict ? $t('page.manage.dict.boundAllDict') : undefined"
+        empty-icon="mdi:all-inclusive"
         @toolbar-action="handleToolbarAction"
       />
       <NEmpty v-else class="mt-80px" :description="$t('page.manage.dict.selectUser')" />

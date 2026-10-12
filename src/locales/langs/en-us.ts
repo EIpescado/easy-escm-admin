@@ -452,6 +452,7 @@ const local: App.I18n.Schema = {
           remark: 'Remark'
         },
         allDict: 'All Dictionaries',
+        boundAllDict: 'All dictionaries bound',
         ownedDict: 'Owned Dictionaries',
         selectUser: 'Select a user on the left',
         selectDict: 'Select a dictionary on the left',
