@@ -1,11 +1,11 @@
 <script setup lang="ts" generic="Row extends Record<string, any>">
-import { computed, h, shallowRef, watch } from 'vue';
+import { computed, h, watch } from 'vue';
 import type { FlatResponseData } from '@sa/axios';
 import {
-  BUTTON_POSITION,
   getButtonLabel,
   resolvePageButtonDisabled,
   usePageButtons,
+  type PageButtonPosition,
   type PageButtonStateRules
 } from '@/hooks/business/page-buttons';
 import { useManageTable } from '@/hooks/business/manage-table';
@@ -57,6 +57,12 @@ interface Props {
   sortable?: boolean;
   /** conditions always applied besides the filter, e.g. a fixed parent id */
   extraItems?: () => Api.SystemManage.QueryItem[];
+  /**
+   * Top level params always sent with the request, e.g. the `userId` of the selected parent row
+   *
+   * Unlike `extraItems` these are not `items` conditions but fields of the `PageQo` itself.
+   */
+  extraParams?: () => Record<string, unknown>;
   /** whether to fetch on creation */
   immediate?: boolean;
   /**
@@ -83,10 +89,24 @@ interface Props {
    * current route and dispatches their `click` to it.
    */
   rowAction?: (row: Row, click: string) => void;
-  /** toolbar buttons, defaults to the `top` buttons of the current route */
+  /** toolbar buttons, defaults to the route buttons of `topButtonPosition` */
   buttons?: Api.SystemManage.ButtonNode[];
-  /** buttons of the operate column, defaults to the `row` buttons of the current route */
+  /**
+   * `position` group of the route buttons rendered in the toolbar
+   *
+   * A page that puts several lists side by side configures it per list, e.g. `left-top`.
+   *
+   * @default 'top'
+   */
+  topButtonPosition?: PageButtonPosition;
+  /** buttons of the operate column, defaults to the route buttons of `rowButtonPosition` */
   operateButtons?: Api.SystemManage.ButtonNode[];
+  /**
+   * `position` group of the route buttons rendered as the operate column
+   *
+   * @default 'row'
+   */
+  rowButtonPosition?: PageButtonPosition;
   /** rules deciding whether a toolbar / row button is disabled */
   buttonRules?: PageButtonStateRules<Row>;
   /**
@@ -113,6 +133,7 @@ const props = withDefaults(defineProps<Props>(), {
   title: undefined,
   sortable: false,
   extraItems: undefined,
+  extraParams: undefined,
   immediate: true,
   exportable: false,
   selection: false,
@@ -121,7 +142,9 @@ const props = withDefaults(defineProps<Props>(), {
   rowClassName: undefined,
   rowAction: undefined,
   buttons: undefined,
+  topButtonPosition: 'top',
   operateButtons: undefined,
+  rowButtonPosition: 'row',
   buttonRules: undefined,
   dangerClicks: () => ['disable', 'delete'],
   beforeSearch: undefined,
@@ -135,25 +158,32 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-const { toolbarButtons: routeButtons, rowButtons } = usePageButtons();
+const { buttons: routeButtons } = usePageButtons();
+
+/** toolbar buttons of this list, the configured `position` group of the route buttons */
+const routeToolbarButtons = computed(() => routeButtons.value[props.topButtonPosition] ?? []);
+
+/** buttons driving the operate column, the configured `position` group of the route buttons */
+const routeRowButtons = computed(() => routeButtons.value[props.rowButtonPosition] ?? []);
 
 /** toolbar buttons of this list */
-const buttons = computed(() => props.buttons ?? routeButtons.value);
+const buttons = computed(() => props.buttons ?? routeToolbarButtons.value);
 
 /** buttons driving the operate column */
-const operateButtons = computed(() => props.operateButtons ?? rowButtons.value);
+const operateButtons = computed(() => props.operateButtons ?? routeRowButtons.value);
 
 const dangerClicks = computed(() => props.dangerClicks);
 
 /** checked rows, the toolbar button rules act on the current selection */
-const checkedRowKeys = shallowRef<(string | number)[]>([]);
+/** checked rows, the toolbar button rules act on the current selection; a page can pre-check rows */
+const checkedRowKeys = defineModel<(string | number)[]>('checkedRowKeys', { default: () => [] });
 
 function getRowKey(row: Row) {
   return props.rowKey ? props.rowKey(row) : String(row.id);
 }
 
 function isRowButtonDisabled(button: Api.SystemManage.ButtonNode, row: Row) {
-  return resolvePageButtonDisabled(button.click, [row], BUTTON_POSITION.row, props.buttonRules);
+  return resolvePageButtonDisabled(button.click, [row], props.rowButtonPosition, props.buttonRules);
 }
 
 /** operate column built from the `row` buttons of the current route */
@@ -198,7 +228,8 @@ const {
 } = useManageTable<Row>({
   tableKey: props.tableKey,
   // every `/system/**` list shares the same request shape, only the url differs
-  api: (query: Api.SystemManage.PageQo): Promise<PageResponse> => fetchPageSearch<Row>(props.url, query),
+  api: (query: Api.SystemManage.PageQo): Promise<PageResponse> =>
+    fetchPageSearch<Row>(props.url, { ...query, ...props.extraParams?.() }),
   sortable: props.sortable,
   immediate: props.immediate,
   fields: () => props.fields,
@@ -220,7 +251,7 @@ const selectedRows = computed(() => data.value.filter(row => checkedRowKeys.valu
 
 /** whether a toolbar button is disabled by its rules and the current selection */
 function isToolbarButtonDisabled(button: Api.SystemManage.ButtonNode) {
-  return resolvePageButtonDisabled(button.click, selectedRows.value, BUTTON_POSITION.top, props.buttonRules);
+  return resolvePageButtonDisabled(button.click, selectedRows.value, props.topButtonPosition, props.buttonRules);
 }
 
 // the route `row` buttons drive the operate column: they may arrive after the first render, so the
@@ -270,7 +301,12 @@ async function reload() {
 
 /** export the visible columns of this list as an xlsx stream */
 function handleExport() {
-  return fetchPageExport(props.url, { ...params, ...buildParams(), exportItems: exportItems.value });
+  return fetchPageExport(props.url, {
+    ...params,
+    ...buildParams(),
+    ...props.extraParams?.(),
+    exportItems: exportItems.value
+  });
 }
 
 /**

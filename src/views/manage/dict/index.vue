@@ -3,7 +3,7 @@ import { computed, h, ref, watch } from 'vue';
 import { NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { FORM_DETAIL_LOAD_DELAY, sleep } from '@/hooks/common/form';
-import { usePageButtons, type PageButtonStateRules } from '@/hooks/business/page-buttons';
+import type { PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { fetchDictDetail, fetchDictEntryDetail, fetchToggleDictEntryState, fetchToggleDictState } from '@/service/api';
 import { enableStateOptions } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
@@ -21,9 +21,6 @@ defineOptions({
 function isEnabled(stateEnum?: string) {
   return stateEnum === 'ON';
 }
-
-/** Buttons of the current route, provided by the backend menu tree */
-const { leftTopButtons, leftRowButtons } = usePageButtons();
 
 /** the list exposes `getData` / `reload` and the loaded rows to the page */
 interface ManageListInstance<Row> {
@@ -451,8 +448,8 @@ async function handleEntrySubmitted() {
       :extra-items="entryExtraItems"
       :before-search="canSearchEntries"
       :pagination-disabled="!activeDictId"
-      :buttons="leftTopButtons"
-      :operate-buttons="leftRowButtons"
+      top-button-position="left-top"
+      row-button-position="left-row"
       :fields="entrySearchFields"
       :columns="getEntryColumns"
       :button-rules="entryButtonRules"
