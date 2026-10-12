@@ -6,7 +6,7 @@ import { useBoolean } from '@sa/hooks';
 import { usePageButtons, type PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { useSvgIcon } from '@/hooks/common/icon';
 import { fetchBindRoleMenu, fetchGetMenuWholeTree, fetchRoleMenuIds, fetchToggleRoleState } from '@/service/api';
-import { roleStateOptions, roleStateRecord } from '@/constants/business';
+import { roleStateOptions } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
 import {
   getMenuNodeLabel,
@@ -18,6 +18,7 @@ import {
 import { $t } from '@/locales';
 import ManageList from '@/components/advanced/manage-list.vue';
 import type { QueryField } from '@/components/advanced/query-filter/types';
+import type { ManageColumn } from '@/utils/table';
 import RoleOperateModal from './modules/role-operate-modal.vue';
 
 defineOptions({
@@ -53,21 +54,10 @@ const buttonStateRules: PageButtonStateRules<Api.SystemManage.Role> = {
 };
 
 /** Data columns; the operate and the selection columns are added by the list */
-const columns = computed<NaiveUI.TableColumn<Api.SystemManage.Role>[]>(() => [
+const columns = computed<ManageColumn<Api.SystemManage.Role>[]>(() => [
   { key: 'roleCode', title: $t('page.manage.role.roleCode'), align: 'center', minWidth: 140 },
   { key: 'roleName', title: $t('page.manage.role.roleName'), align: 'center', minWidth: 140 },
-  {
-    key: 'state',
-    title: $t('page.manage.role.stateLabel'),
-    align: 'center',
-    width: 100,
-    render: row =>
-      h(
-        NTag,
-        { type: row.stateEnum === 'ON' ? 'success' : 'error', size: 'small', bordered: false },
-        { default: () => $t(roleStateRecord[row.stateEnum]) }
-      )
-  },
+  { key: 'state', title: $t('page.manage.role.stateLabel'), align: 'center', width: 100, cell: 'enabled' },
   { key: 'remark', title: $t('page.manage.role.remark'), align: 'center', minWidth: 160 }
 ]);
 

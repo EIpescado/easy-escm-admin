@@ -1,3 +1,6 @@
+import { h } from 'vue';
+import { NTag } from 'naive-ui';
+import { $t } from '@/locales';
 import type { QueryField } from '@/components/advanced/query-filter/types';
 
 /**
@@ -67,4 +70,71 @@ export function getSortFields(checks: NaiveUI.TableColumnCheck[]): QueryField[] 
     prop: check.key,
     label: getColumnLabel(check)
   }));
+}
+
+/** Render an enable/disable tag; `value` is the enum name stored in the row */
+export function renderEnabledTag(value: unknown, onValue = 'ON') {
+  const enabled = String(value) === onValue;
+
+  return h(
+    NTag,
+    { type: enabled ? 'success' : 'error', size: 'small', bordered: false },
+    { default: () => $t(enabled ? 'common.enable' : 'common.disable') }
+  );
+}
+
+/** Render a yes/no tag */
+export function renderBooleanTag(value: unknown) {
+  return h(
+    NTag,
+    { type: value ? 'warning' : 'default', size: 'small', bordered: false },
+    { default: () => $t(value ? 'common.yesOrNo.yes' : 'common.yesOrNo.no') }
+  );
+}
+
+/**
+ * A management list column
+ *
+ * `cell` picks a built-in renderer, so a page does not repeat the enable/disable or the yes/no tag
+ * on every list:
+ *
+ * ```ts
+ * { key: 'state', title: $t('…'), cell: 'enabled' }
+ * ```
+ */
+export type ManageColumn<Row> = NaiveUI.TableColumn<Row> & {
+  /** Built-in cell renderer */
+  cell?: 'enabled' | 'boolean';
+  /**
+   * Row field the built-in renderer reads, defaults to the column `key`
+   *
+   * The `enabled` renderer reads `<key>Enum` instead when the row carries it, see
+   * {@link withCellRenderer}.
+   */
+  cellKey?: string;
+  /** Enum name the `enabled` renderer treats as enabled */
+  onValue?: string;
+};
+
+/** Apply the built-in `cell` renderer of a column, leaving the other columns untouched */
+export function withCellRenderer<Row>(column: ManageColumn<Row>): NaiveUI.TableColumn<Row> {
+  const { cell, cellKey, onValue, ...rest } = column;
+
+  if (!cell) return rest as unknown as NaiveUI.TableColumn<Row>;
+
+  const key = cellKey ?? (rest as { key?: string }).key ?? '';
+
+  return {
+    ...rest,
+    render: (row: Row) => {
+      const record = row as Record<string, unknown>;
+      const value = record[key];
+
+      if (cell === 'boolean') return renderBooleanTag(value);
+
+      // the backend writes an enum field twice: `state` holds the text (启用), `stateEnum` the enum
+      // name (ON); the tag must read the enum name, so prefer it whenever the row carries it
+      return renderEnabledTag(record[`${key}Enum`] ?? value, onValue);
+    }
+  } as unknown as NaiveUI.TableColumn<Row>;
 }

@@ -10,7 +10,7 @@ import {
 } from '@/hooks/business/page-buttons';
 import { useManageTable } from '@/hooks/business/manage-table';
 import { fetchPageExport, fetchPageSearch } from '@/service/api';
-import { getTableOperateColumnWidth } from '@/utils/table';
+import { getTableOperateColumnWidth, withCellRenderer, type ManageColumn } from '@/utils/table';
 import { $t } from '@/locales';
 import QueryFilter from './query-filter/index.vue';
 import TableExportButton from './table-export-button.vue';
@@ -45,7 +45,7 @@ interface Props {
   /** fields rendered by the query filter */
   fields: QueryField[];
   /** data columns; the operate and selection columns are added by the component */
-  columns: () => NaiveUI.TableColumn<Row>[];
+  columns: () => ManageColumn<Row>[];
   /**
    * Card title
    *
@@ -53,6 +53,14 @@ interface Props {
    * like the dictionary page) should pass it; a single list leaves it unset.
    */
   title?: string;
+  /**
+   * Replaces the built-in `no data` hint of the list area
+   *
+   * Use it to flag a state instead of an empty list, e.g. "all dictionaries bound".
+   */
+  emptyText?: string;
+  /** Iconify name of the {@link Props.emptyText} icon */
+  emptyIcon?: string;
   /** whether the list offers a custom sort, shown next to the pagination */
   sortable?: boolean;
   /** conditions always applied besides the filter, e.g. a fixed parent id */
@@ -131,6 +139,8 @@ interface Props {
  */
 const props = withDefaults(defineProps<Props>(), {
   title: undefined,
+  emptyText: undefined,
+  emptyIcon: undefined,
   sortable: false,
   extraItems: undefined,
   extraParams: undefined,
@@ -240,7 +250,8 @@ const {
     if (operateColumn.value) tableColumns.push(operateColumn.value);
     if (props.selection) tableColumns.push({ type: 'selection', align: 'center', width: 48 });
 
-    tableColumns.push(...props.columns());
+    // the pages may mark a column with a built-in `cell` renderer instead of writing one
+    tableColumns.push(...props.columns().map(column => withCellRenderer(column)));
 
     return tableColumns;
   }
@@ -352,7 +363,13 @@ defineExpose({
             </template>
           </TableHeaderOperation>
         </div>
+        <!-- the page flags a state instead of showing a list, e.g. "all dictionaries bound" -->
+        <div v-if="emptyText" class="min-h-0 flex flex-1 flex-col items-center justify-center gap-8px">
+          <SvgIcon v-if="emptyIcon" :icon="emptyIcon" class="text-40px" />
+          <span class="text-14px text-gray-400">{{ emptyText }}</span>
+        </div>
         <NDataTable
+          v-else
           v-model:checked-row-keys="checkedRowKeys"
           :columns="tableColumns"
           :data="data"
