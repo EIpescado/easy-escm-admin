@@ -355,3 +355,51 @@ export function fetchFileDownload(ids: string[]) {
 export function fetchCallbackReExecute(ids: string[]) {
   return request<string>({ url: '/system/callback/reExecute', method: 'post', data: ids });
 }
+
+/** get the detail of a system client */
+export function fetchClientDetail(id: string) {
+  return request<Api.SystemManage.Client>({ url: '/system/client/detail', method: 'post', data: { id } });
+}
+
+/** create a system client */
+export function fetchCreateClient(data: Api.SystemManage.ClientForm) {
+  return request<string>({ url: '/system/client', method: 'post', data });
+}
+
+/** update a system client */
+export function fetchUpdateClient(data: Api.SystemManage.ClientForm) {
+  return request<string>({ url: '/system/client/update', method: 'post', data });
+}
+
+/** enable or disable a system client */
+export function fetchToggleClientState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/client/enable' : '/system/client/disable',
+    method: 'post',
+    data: { id }
+  });
+}
+
+/** get a message template detail (includes its entries) */
+export function fetchMsgTemplateDetail(id: string) {
+  return request<Api.SystemManage.MsgTemplate>({ url: '/system/msgTemplate/detail', method: 'post', data: { id } });
+}
+
+/** create a message template */
+export function fetchCreateMsgTemplate(data: Api.SystemManage.MsgTemplateForm) {
+  return request<string>({ url: '/system/msgTemplate', method: 'post', data });
+}
+
+/** update a message template */
+export function fetchUpdateMsgTemplate(data: Api.SystemManage.MsgTemplateForm) {
+  return request<string>({ url: '/system/msgTemplate/update', method: 'post', data });
+}
+
+/** enable or disable a message template */
+export function fetchToggleMsgTemplateState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/msgTemplate/enable' : '/system/msgTemplate/disable',
+    method: 'post',
+    data: { id }
+  });
+}

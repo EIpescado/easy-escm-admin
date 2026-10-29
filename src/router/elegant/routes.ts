@@ -94,6 +94,15 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       },
       {
+        name: 'manage_client',
+        path: '/manage/client',
+        component: 'view.manage_client',
+        meta: {
+          title: 'manage_client',
+          i18nKey: 'route.manage_client'
+        }
+      },
+      {
         name: 'manage_dict',
         path: '/manage/dict',
         component: 'view.manage_dict',
@@ -118,6 +127,15 @@ export const generatedRoutes: GeneratedRoute[] = [
         meta: {
           title: 'manage_menu',
           i18nKey: 'route.manage_menu'
+        }
+      },
+      {
+        name: 'manage_msg-template',
+        path: '/manage/msg-template',
+        component: 'view.manage_msg-template',
+        meta: {
+          title: 'manage_msg-template',
+          i18nKey: 'route.manage_msg-template'
         }
       },
       {

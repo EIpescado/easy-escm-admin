@@ -450,5 +450,104 @@ declare namespace Api {
       createTime?: string | null;
       updateTime?: string | null;
     }
+
+    /** system client (system_client), aligned with backend SystemClientTo / SystemClientVo */
+    interface Client {
+      id: string;
+      /** client id */
+      clientId: string;
+      /** client secret */
+      clientSecret?: string | null;
+      /** supported grant types, comma separated */
+      grantType?: string | null;
+      /** device type */
+      deviceType?: string | null;
+      /** token minimum active interval in seconds, -1 means unlimited */
+      activeTimeout?: number | null;
+      /** token timeout in seconds */
+      timeout?: number | null;
+      /** state label */
+      state?: string | null;
+      /** state enum name, e.g. ON / OFF */
+      stateEnum?: string | null;
+      remark?: string | null;
+      creator?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+    }
+
+    /** system client form, aligned with backend SystemClientFo */
+    interface ClientForm {
+      id?: string;
+      clientId: string;
+      clientSecret: string;
+      /** supported grant types, comma separated */
+      grantType?: string | null;
+      deviceType?: string | null;
+      /** token minimum active interval in seconds, -1 means unlimited */
+      activeTimeout?: number | null;
+      /** token timeout in seconds */
+      timeout?: number | null;
+      remark?: string | null;
+    }
+
+    /** message template entry, aligned with backend MsgTemplate.Entry */
+    interface MsgTemplateEntry {
+      sn?: number | null;
+      /** entry type, a `system_msg_template_entry_type` dictionary code */
+      type?: string | null;
+      /** parameter label */
+      label?: string | null;
+      /** parameter label description */
+      labelDesc?: string | null;
+      /** default value */
+      val?: string | null;
+      /** parameter field name */
+      prop?: string | null;
+      /** color, only used by some message systems */
+      color?: string | null;
+    }
+
+    /** message template (system_msg_template), aligned with backend SystemMsgTemplateTo / SystemMsgTemplateVo */
+    interface MsgTemplate {
+      id: string;
+      code: string;
+      /** message type, a `system_msg_template_type` dictionary code */
+      type?: string | null;
+      /** translated label of `type`, added by the backend `@DictField` writer */
+      typeVal?: string | null;
+      sn?: number | null;
+      title?: string | null;
+      titleDesc?: string | null;
+      subTitle?: string | null;
+      subTitleDesc?: string | null;
+      whetherConfirm?: boolean | null;
+      hidden?: boolean | null;
+      remark?: string | null;
+      remarkDesc?: string | null;
+      state?: string | null;
+      stateEnum?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+      /** template entries, only returned by the detail endpoint */
+      entryList?: MsgTemplateEntry[] | null;
+    }
+
+    /** message template form, aligned with backend SystemMsgTemplateFo */
+    interface MsgTemplateForm {
+      id?: string;
+      code: string;
+      type?: string | null;
+      sn?: number | null;
+      title?: string | null;
+      titleDesc?: string | null;
+      subTitle?: string | null;
+      subTitleDesc?: string | null;
+      whetherConfirm?: boolean | null;
+      hidden?: boolean | null;
+      remark?: string | null;
+      remarkDesc?: string | null;
+      entryList?: MsgTemplateEntry[];
+    }
   }
 }

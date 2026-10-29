@@ -25,9 +25,11 @@ declare module "@elegant-router/types" {
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
     "manage": "/manage";
     "manage_callback": "/manage/callback";
+    "manage_client": "/manage/client";
     "manage_dict": "/manage/dict";
     "manage_file": "/manage/file";
     "manage_menu": "/manage/menu";
+    "manage_msg-template": "/manage/msg-template";
     "manage_role": "/manage/role";
     "manage_user": "/manage/user";
     "manage_user-detail": "/manage/user-detail/:id";
@@ -93,9 +95,11 @@ declare module "@elegant-router/types" {
     | "login"
     | "home"
     | "manage_callback"
+    | "manage_client"
     | "manage_dict"
     | "manage_file"
     | "manage_menu"
+    | "manage_msg-template"
     | "manage_role"
     | "manage_user-detail"
     | "manage_user-dict"

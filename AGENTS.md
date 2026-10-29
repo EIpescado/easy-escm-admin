@@ -50,7 +50,7 @@
 
 ## 系统管理页（本分支新增）
 
-- 页面在 `src/views/manage/{user,user-detail,role,menu,dict,user-dict,file,callback}/`，路由名固定为 `manage_user` / `manage_role` / `manage_menu` / `manage_dict` / `manage_user-dict` / `manage_file` / `manage_callback`（见 `src/router/elegant/imports.ts`）。
+- 页面在 `src/views/manage/{user,user-detail,role,menu,dict,user-dict,file,callback,client,msg-template}/`，路由名固定为 `manage_user` / `manage_role` / `manage_menu` / `manage_dict` / `manage_user-dict` / `manage_file` / `manage_callback` / `manage_client` / `manage_msg-template`（见 `src/router/elegant/imports.ts`）。
 - 用户详情是独立页面 `src/views/manage/user-detail/[id].vue`（路由 `manage_user-detail`，路径 `/manage/user-detail/:id`，参数经 `props.id` 注入），由用户列表的「详情」行按钮进入。dynamic 模式下需后端菜单提供对应节点（建议 `hideInMenu: true`）才会注册该路由。
 - 按钮权限由后端菜单 `meta.buttons` 下发，按 `position` 分组：`top`（工具栏）/ `row`（行操作）/ `left-top`（右侧面板工具栏）/ `left-row`（右侧面板行操作）；用 `usePageButtons()`（`src/hooks/business/page-buttons.ts`）读取，`click` 动作映射到 i18n，未知动作回退后端 `name`。**页面不允许写本地兜底按钮**，所有按钮必须由后端菜单动态下发（`click` 决定前端行为，`i18nKey` 决定文案）。
 - 按钮可用性可配置：页面用 `usePageButtonState<Row>(rules)`（同文件）声明规则，规则以 `click` 为 key、接收 `{ rows, position }` 并返回 `true` 表示禁用（top 的 `rows` 是勾选行，row 的 `rows` 是当前行）。行按钮经 `TableRowOperation` 的 `disabled`、工具栏按钮经 `TableToolbarButtons` 的 `:disabled` 生效。
@@ -70,6 +70,33 @@
 - **权限树**（角色管理右侧）：数据源用 `/system/menu/wholeTree`；已绑定项取自 `/system/role/menuAndButtonIds`（含菜单 + 按钮 id），保存走 `/system/role/bind`，按 `menuIds` / `buttonIds` 分别提交并自动补全被勾选节点的上级菜单；树按 `meta.i18nKey` 优先、回退 `name` 显示，并用 `getMenuNodeType`（`src/utils/menu.ts`）区分 root/目录/菜单/按钮。
 - **文件管理** `manage_file`（`src/views/manage/file/`）：列表用 `ManageList`，`url="/system/file/search"`；文件标签列与标签下拉取自字典 `system_file_tag`（`fetchDictSelect(dictCode)` → `GET /system/dict/select`）。上传在 `modules/file-upload-modal.vue`：≤5M 走 `POST /system/file/upload`，更大的自动分片——`getFileMd5()`（`src/utils/file.ts`，crypto-js 增量计算，作 `identifier` 以支持秒传/断点续传）→ `checkChunk` → `uploadChunk`（单片 ≤ 后端 `chunkSize`，返回的 `uploadedChunks` 用于跳过续传）→ `mergeChunk`。下载走 `POST /system/file/download`（body 为 id 数组，多文件后端自动打 zip），blob 保存复用 `src/utils/file.ts` 的 `getDownloadFileName` / `saveBlob`（`TableExportButton` 也用它）。工具栏按钮全部由后端菜单 `top` 下发（`click` 为 `upload` / `download`，`i18nKey` 为 `system.file.upload` / `system.file.download`），页面无本地兜底按钮。
 - **回调记录** `manage_callback`（`src/views/manage/callback/`）：列表 `url="/system/callback/search"`，展示 `type`（字典 `system_callback_type`，用后端 `@DictField` 的 `typeVal` 译文）、`name`、`success`、`subject`、`primaryKey`、`traceId`、`creator`、`requestTime`，以及请求/响应内容。请求/响应内容在副表，仅当 Qo 顶层 `showRequestContent` / `showResponseContent` 为 true 时才 join 出来；查询栏里的「显示请求参数 / 显示响应结果」两个字段直接标 `param: true`（见上），不进 `items`、作为顶层参数下发。时间条件用 `requestTime`（需后端 `SystemCallbackTo` 含 `requestTime` / `subject` / `primaryKey` / `traceId` 才会返回）。重调走 `POST /system/callback/reExecute`（body 为 id 数组），按钮完全由后端菜单下发：`top` / `row` 的 `click` 用 `reExecute`，`i18nKey` 用 `system.callback.reExecute`（`top` 作用于勾选行）。
+- **客户端管理** `manage_client`（`src/views/manage/client/`）：列表 `url="/system/client/search"`，列 `clientId` / `grantType`（逗号分隔）/ `deviceType` / `activeTimeout`（`-1` 显示为不限制）/ `timeout` / `state`（`cell: 'enabled'` 读 `stateEnum`）/ `remark` / `createTime`。新增、编辑走 `POST /system/client` / `/system/client/update`（`SystemClientFo` **没有 state 字段**）；启用/禁用走 `POST /system/client/enable` / `/system/client/disable`（`IdFo`，`switchAbleState`）；update 会清理旧/新 clientId 的鉴权缓存。表单里 grantType 用多选 tag（password / sms），提交时逗号拼接。按钮全部由后端菜单下发：`top` 的 `click=create`，`row` 的 `click=update` / `enable` / `disable`；`enable`/`disable` 按 `stateEnum` 置灰。
+- **消息模版** `manage_msg-template`（`src/views/manage/msg-template/`）：列表 `url="/system/msgTemplate/search"`，列 `code` / `type`（tag，`typeVal` 优先）/ `title` / `titleDesc` / `sn` / `whetherConfirm`（`cell: 'boolean'`）/ `hidden`（`cell: 'boolean'`）/ `state`（`cell: 'enabled'`）/ `remark` / `createTime`。新增、编辑走 `POST /system/msgTemplate` / `/update`（`SystemMsgTemplateFo`，含 `entryList`）；编辑时用 `/system/msgTemplate/detail` 拉详情（列表 To 不含 `subTitle` / `entryList`）；启用/禁用走 `/system/msgTemplate/enable` / `/disable`。消息类型、参数类型分别取字典 `system_msg_template_type` / `system_msg_template_entry_type`，为空时下拉带 `tag` 允许手填编码。模版参数用 `NDynamicInput` 编辑（sn / type / label / prop / val / labelDesc / color），提交时过滤掉 `label` 与 `prop` 都为空的行。按钮：`top` 的 `click=create`，`row` 的 `click=update` / `enable` / `disable`。
+
+### 通过界面创建菜单 / 按钮（快速步骤）
+
+菜单和按钮**不写在代码里**，全部在「系统管理 → 菜单管理」里配：
+
+1. 登录后进入「系统管理 → 菜单管理」，点「全部展开」。
+2. **新增菜单**：找到父节点（如 `目录 manage` / 系统管理），该行「操作 → 新增子菜单」，填：
+   - 路由名称 = 路由名，如 `manage_client`（对应 `src/views/manage/client/index.vue` 生成的 `manage_client`）
+   - 菜单标题 = 中文名
+   - 国际化键 = `route.<路由名>`（先在 `src/locales/langs/{zh-cn,en-us}.ts` 和 `src/typings/app.d.ts` 的 `Schema` 里加好）
+   - 图标 = Iconify 名，如 `mdi:account-key`
+   - 排序号 = 同级递增
+   - 路由地址 = 如 `/manage/client`
+   - 组件路径 = `view.<路由名>`（该下拉带 `tag`，直接输入后回车；对应 `src/views/**` 的页面。找不到会跳过并打印 `[route] skip menu ...`）
+   - 权限码可留空；页面缓存 / 隐藏菜单 / 多标签按需
+3. **新增按钮**：在刚建的菜单行「操作 → 新增按钮」，每个按钮填：
+   - 按钮名称、国际化键（`common.create` / `common.update` / `common.enable` / `common.disable` 等）
+   - 排序号、权限码（可选，如 `system:client:create`）
+   - **触发动作** = 页面 `handleToolbarAction` / `handleRowAction` 分发的 `click`（`create` / `update` / `enable` / `disable` / `reExecute` …）
+   - **按钮位置** = `top`（工具栏）/ `row`（行操作）；并排多列表用 `left-top` / `left-row`，并在页面上配 `top-button-position` / `row-button-position`
+4. 保存后刷新/重新登录（应用启动时从 `/system/menu/tree` 拉菜单与 `meta.buttons`）。页面代码只按 `click` 分发，**不要写本地兜底按钮**。
+5. 删除按钮/菜单：对应行「操作 → 删除」。
+6. 启用/禁用等按钮需要后端控制器有对应接口（如 `/enable`、`/disable`），否则点击会 404。
+
+> 新增子菜单时「上级菜单」和 `pid` 会自动带入，无需手填；只有新增顶级菜单才需要选根。
 
 ## 数据约定（重要）
 
