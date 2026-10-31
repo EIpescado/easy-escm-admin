@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref } from 'vue';
+import { computed, h, ref } from 'vue';
 import { NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
-import { fetchDictSelect, fetchToggleMsgTemplateState } from '@/service/api';
+import { fetchToggleMsgTemplateState } from '@/service/api';
 import type { PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { enableStateOptions } from '@/constants/business';
 import { showConfirmDialog, translateOptions } from '@/utils/common';
@@ -19,19 +19,6 @@ defineOptions({
 /** dictionary holding the message types, used by the type column and the search select */
 const DICT_TEMPLATE_TYPE = 'system_msg_template_type';
 
-/** message type options */
-const typeOptions = ref<Api.SystemManage.DictEntry[]>([]);
-
-async function loadTypeOptions() {
-  const { data, error } = await fetchDictSelect(DICT_TEMPLATE_TYPE);
-
-  if (!error) {
-    typeOptions.value = data ?? [];
-  }
-}
-
-onMounted(loadTypeOptions);
-
 /** Search fields of the query filter */
 const searchFields = computed<QueryField[]>(() => [
   {
@@ -47,7 +34,7 @@ const searchFields = computed<QueryField[]>(() => [
     label: $t('page.manage.msgTemplate.type'),
     valueType: 'select',
     types: ['eq'],
-    options: typeOptions.value.map(entry => ({ label: entry.val || entry.code, value: entry.code }))
+    remote: { source: 'dict', dictCode: DICT_TEMPLATE_TYPE }
   },
   {
     prop: 'state',
@@ -66,8 +53,11 @@ const columns = computed<ManageColumn<Api.SystemManage.MsgTemplate>[]>(() => [
     title: $t('page.manage.msgTemplate.type'),
     align: 'center',
     width: 130,
-    render: row =>
-      h(NTag, { size: 'small', bordered: false, type: 'info' }, { default: () => row.typeVal || row.type || '-' })
+    render: row => {
+      const type = row.typeVal || row.type;
+
+      return type ? h(NTag, { size: 'small', bordered: false, type: 'info' }, { default: () => type }) : '';
+    }
   },
   { key: 'title', title: $t('page.manage.msgTemplate.title'), minWidth: 160, ellipsis: { tooltip: true } },
   {

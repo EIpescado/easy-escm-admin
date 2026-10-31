@@ -303,7 +303,13 @@ declare namespace App {
       key: LangType;
     };
 
-    type I18nRouteKey = Exclude<RouteKey, 'root' | 'not-found'>;
+    /**
+     * Route keys that carry a `route.*` translation
+     *
+     * `message`, `file` and `api` are menu-only directories (no view folders of their own), so the
+     * elegant router does not generate them, but the sidebar still needs their translated titles.
+     */
+    type I18nRouteKey = Exclude<RouteKey, 'root' | 'not-found'> | 'message' | 'file' | 'api';
 
     type FormMsg = {
       required: string;
@@ -346,6 +352,9 @@ declare namespace App {
         callback: {
           reExecute: string;
         };
+        specialFile: {
+          download: string;
+        };
       };
       common: {
         action: string;
@@ -376,6 +385,11 @@ declare namespace App {
         export: string;
         index: string;
         keywordSearch: string;
+        loading: string;
+        copy: string;
+        copySuccess: string;
+        expandAll: string;
+        collapseAll: string;
         logout: string;
         logoutConfirm: string;
         lookForward: string;
@@ -718,6 +732,10 @@ declare namespace App {
             uploadSuccess: string;
             uploadTip: string;
             downloadFailed: string;
+            previewFailed: string;
+            previewUnsupported: string;
+            previewTooLarge: string;
+            previewDownload: string;
             phase: {
               hashing: string;
               checking: string;
@@ -743,6 +761,10 @@ declare namespace App {
             showResponseContent: string;
             reExecuteConfirm: string;
             reExecuteSuccess: string;
+            view: string;
+            viewRequest: string;
+            viewResponse: string;
+            noContent: string;
           };
           client: {
             clientId: string;
@@ -756,6 +778,7 @@ declare namespace App {
             createTime: string;
             unlimited: string;
             activeTimeoutTip: string;
+            timeoutTip: string;
             grantTypePlaceholder: string;
             enableConfirm: string;
             disableConfirm: string;
@@ -771,10 +794,12 @@ declare namespace App {
             titleDesc: string;
             subTitle: string;
             subTitleDesc: string;
+            subTitleDescTip: string;
             whetherConfirm: string;
             hidden: string;
             remark: string;
             remarkDesc: string;
+            remarkDescTip: string;
             state: string;
             createTime: string;
             entries: string;
@@ -786,6 +811,147 @@ declare namespace App {
             entryVal: string;
             entryProp: string;
             entryColor: string;
+            enableConfirm: string;
+            disableConfirm: string;
+            createTitle: string;
+            editTitle: string;
+          };
+          no: {
+            docType: string;
+            docTypeTip: string;
+            docTypePlaceholder: string;
+            prefix: string;
+            format: string;
+            formatTip: string;
+            formatPlaceholder: string;
+            template: string;
+            templateTip: string;
+            currentNo: string;
+            currentNoTip: string;
+            bit: string;
+            bitTip: string;
+            batchNumber: string;
+            batchNumberTip: string;
+            lastFetchTime: string;
+            remark: string;
+            createTime: string;
+            createTitle: string;
+            editTitle: string;
+          };
+          notice: {
+            type: string;
+            typePlaceholder: string;
+            title: string;
+            content: string;
+            onTime: string;
+            publishTime: string;
+            offTime: string;
+            targets: string;
+            targetsTip: string;
+            targetType: string;
+            targetCode: string;
+            creator: string;
+            createTime: string;
+            createTitle: string;
+            editTitle: string;
+          };
+          org: {
+            code: string;
+            codeTip: string;
+            codePlaceholder: string;
+            name: string;
+            state: string;
+            remark: string;
+            creator: string;
+            createTime: string;
+            enableConfirm: string;
+            disableConfirm: string;
+            createTitle: string;
+            editTitle: string;
+          };
+          specialFile: {
+            code: string;
+            codeTip: string;
+            codePlaceholder: string;
+            file: string;
+            filePlaceholder: string;
+            uploadFile: string;
+            clearFile: string;
+            fileName: string;
+            userName: string;
+            userId: string;
+            userTip: string;
+            all: string;
+            state: string;
+            remark: string;
+            createTime: string;
+            enableConfirm: string;
+            disableConfirm: string;
+            createTitle: string;
+            editTitle: string;
+          };
+          third: {
+            type: string;
+            typePlaceholder: string;
+            name: string;
+            nameTip: string;
+            namePlaceholder: string;
+            config: string;
+            configTip: string;
+            configPendingTip: string;
+            configUnknownTip: string;
+            fieldHost: string;
+            fieldPort: string;
+            fieldUsername: string;
+            fieldPassword: string;
+            fieldAlias: string;
+            fieldCorpId: string;
+            fieldCorpIdTip: string;
+            fieldAgentId: string;
+            fieldAgentIdTip: string;
+            fieldSecret: string;
+            fieldSecretTip: string;
+            fieldToken: string;
+            fieldAesKey: string;
+            fieldAesKeyTip: string;
+            fieldWebhookKey: string;
+            fieldWebhookKeyTip: string;
+            fieldAppId: string;
+            fieldAppIdTip: string;
+            fieldMpSecretTip: string;
+            fieldMpTokenTip: string;
+            fieldMpAesKeyTip: string;
+            formatJson: string;
+            invalidJson: string;
+            state: string;
+            remark: string;
+            createTime: string;
+            enableConfirm: string;
+            disableConfirm: string;
+            createTitle: string;
+            editTitle: string;
+          };
+          thirdTemplate: {
+            template: string;
+            templatePlaceholder: string;
+            third: string;
+            thirdPlaceholder: string;
+            name: string;
+            namePlaceholder: string;
+            nameTip: string;
+            config: string;
+            configTip: string;
+            configPendingTip: string;
+            noConfigTip: string;
+            noConfigMpTip: string;
+            fieldSubject: string;
+            fieldFtl: string;
+            fieldFtlTip: string;
+            formatJson: string;
+            invalidJson: string;
+            state: string;
+            remark: string;
+            createTime: string;
             enableConfirm: string;
             disableConfirm: string;
             createTitle: string;
@@ -809,14 +975,10 @@ declare namespace App {
           visitCount: string;
           turnover: string;
           dealCount: string;
-          projectNews: {
+          latestNotice: {
             title: string;
-            moreNews: string;
-            desc1: string;
-            desc2: string;
-            desc3: string;
-            desc4: string;
-            desc5: string;
+            more: string;
+            empty: string;
           };
           creativity: string;
         };

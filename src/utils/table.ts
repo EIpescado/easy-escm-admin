@@ -116,6 +116,42 @@ export type ManageColumn<Row> = NaiveUI.TableColumn<Row> & {
   onValue?: string;
 };
 
+/**
+ * Whether a column key holds a date / datetime, e.g. `createTime`, `requestTime`, `request_time`
+ *
+ * Case-sensitive on the camelCase suffix so words like `validate` are not mistaken for dates.
+ */
+function isDateColumnKey(key: string) {
+  return /(Time|Date)s?$/.test(key) || /(^|_)(time|date)s?$/i.test(key);
+}
+
+/** Width of a datetime cell: `yyyy-MM-dd HH:mm:ss` plus the cell padding */
+const DATE_TIME_COLUMN_WIDTH = 170;
+
+/**
+ * Keep a date / datetime column on one line at a fixed width
+ *
+ * The backend serialises them as `yyyy-MM-dd` or `yyyy-MM-dd HH:mm:ss`; the space lets a narrow
+ * column wrap a timestamp into two lines, so the width is fixed and the cells never wrap.
+ */
+export function withDateColumnStyle<Row>(column: NaiveUI.TableColumn<Row>): NaiveUI.TableColumn<Row> {
+  if (!('key' in column) || typeof column.key !== 'string' || !isDateColumnKey(column.key)) {
+    return column;
+  }
+
+  const { cellProps, width } = column;
+  const columnWidth = typeof width === 'number' ? Math.max(width, DATE_TIME_COLUMN_WIDTH) : DATE_TIME_COLUMN_WIDTH;
+
+  return {
+    ...column,
+    width: columnWidth,
+    cellProps: (row: Row, index: number) => ({
+      ...cellProps?.(row, index),
+      style: { whiteSpace: 'nowrap' }
+    })
+  } as NaiveUI.TableColumn<Row>;
+}
+
 /** Apply the built-in `cell` renderer of a column, leaving the other columns untouched */
 export function withCellRenderer<Row>(column: ManageColumn<Row>): NaiveUI.TableColumn<Row> {
   const { cell, cellKey, onValue, ...rest } = column;

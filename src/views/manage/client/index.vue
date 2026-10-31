@@ -38,7 +38,7 @@ const searchFields = computed<QueryField[]>(() => [
 
 /** `-1` means the token is never frozen */
 function renderActiveTimeout(value?: number | null) {
-  if (value === null || value === undefined) return '-';
+  if (value === null || value === undefined) return '';
 
   return value === -1 ? $t('page.manage.client.unlimited') : value;
 }

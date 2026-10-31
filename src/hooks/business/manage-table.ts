@@ -53,10 +53,16 @@ export interface UseManageTableOptions<Row extends Record<string, any>> {
    * @default false
    */
   sortable?: boolean;
+  /**
+   * Backend sort applied until the user changes the sort of a sortable list
+   *
+   * A non-sortable list keeps it for every search, e.g. the dictionary entries are ordered by `sn`.
+   */
+  defaultOrders?: Api.SystemManage.OrderByItem[];
 }
 
 export function useManageTable<Row extends Record<string, any>>(options: UseManageTableOptions<Row>) {
-  const { tableKey, api, columns, fields, extraItems, immediate = true, sortable = false } = options;
+  const { tableKey, api, columns, fields, extraItems, immediate = true, sortable = false, defaultOrders } = options;
 
   /**
    * Filter conditions, seeded from the fields that declare `defaultValues` (e.g. a default date
@@ -68,9 +74,13 @@ export function useManageTable<Row extends Record<string, any>>(options: UseMana
       .map(field => createCondition(field, { values: field.defaultValues }))
   );
 
-  /** custom sort rules, restored from the table settings */
+  /**
+   * Sort rules: the saved ones of the column settings, otherwise the page defaults
+   *
+   * A non-sortable list never changes them, so its defaults apply to every search.
+   */
   const sort = ref<QuerySortItem[]>(
-    (getTableSetting(tableKey)?.orders ?? []).map(order => ({
+    (getTableSetting(tableKey)?.orders ?? defaultOrders ?? []).map(order => ({
       id: createSortId(),
       prop: order.prop,
       asc: order.asc ?? true

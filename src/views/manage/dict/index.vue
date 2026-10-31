@@ -173,6 +173,9 @@ const entryButtonRules: PageButtonStateRules<Api.SystemManage.DictEntry> = {
   add: () => !activeDictId.value
 };
 
+/** entries are listed in the dictionary's own order unless the user chooses another one */
+const entryDefaultOrders: Api.SystemManage.OrderByItem[] = [{ prop: 'sn', asc: true }];
+
 /** the entries list is tied to the selected dictionary, never search it without one */
 function canSearchEntries() {
   if (activeDictId.value) return true;
@@ -446,6 +449,7 @@ async function handleEntrySubmitted() {
       url="/system/dictEntry/search"
       :immediate="false"
       :extra-items="entryExtraItems"
+      :default-orders="entryDefaultOrders"
       :before-search="canSearchEntries"
       :pagination-disabled="!activeDictId"
       top-button-position="left-top"

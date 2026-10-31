@@ -10,7 +10,7 @@ import {
 } from '@/hooks/business/page-buttons';
 import { useManageTable } from '@/hooks/business/manage-table';
 import { fetchPageExport, fetchPageSearch } from '@/service/api';
-import { getTableOperateColumnWidth, withCellRenderer, type ManageColumn } from '@/utils/table';
+import { getTableOperateColumnWidth, withCellRenderer, withDateColumnStyle, type ManageColumn } from '@/utils/table';
 import { $t } from '@/locales';
 import QueryFilter from './query-filter/index.vue';
 import TableExportButton from './table-export-button.vue';
@@ -63,6 +63,12 @@ interface Props {
   emptyIcon?: string;
   /** whether the list offers a custom sort, shown next to the pagination */
   sortable?: boolean;
+  /**
+   * Backend sort applied when the user has not chosen a sort
+   *
+   * A non-sortable list keeps it for every search, e.g. the dictionary entries are ordered by `sn`.
+   */
+  defaultOrders?: Api.SystemManage.OrderByItem[];
   /** conditions always applied besides the filter, e.g. a fixed parent id */
   extraItems?: () => Api.SystemManage.QueryItem[];
   /**
@@ -142,6 +148,7 @@ const props = withDefaults(defineProps<Props>(), {
   emptyText: undefined,
   emptyIcon: undefined,
   sortable: false,
+  defaultOrders: undefined,
   extraItems: undefined,
   extraParams: undefined,
   immediate: true,
@@ -241,6 +248,7 @@ const {
   api: (query: Api.SystemManage.PageQo): Promise<PageResponse> =>
     fetchPageSearch<Row>(props.url, { ...query, ...props.extraParams?.() }),
   sortable: props.sortable,
+  defaultOrders: props.defaultOrders,
   immediate: props.immediate,
   fields: () => props.fields,
   extraItems: props.extraItems,
@@ -250,8 +258,9 @@ const {
     if (operateColumn.value) tableColumns.push(operateColumn.value);
     if (props.selection) tableColumns.push({ type: 'selection', align: 'center', width: 48 });
 
-    // the pages may mark a column with a built-in `cell` renderer instead of writing one
-    tableColumns.push(...props.columns().map(column => withCellRenderer(column)));
+    // the pages may mark a column with a built-in `cell` renderer instead of writing one; date and
+    // datetime columns get a fixed width and never wrap
+    tableColumns.push(...props.columns().map(column => withDateColumnStyle(withCellRenderer(column))));
 
     return tableColumns;
   }

@@ -2,7 +2,7 @@
  * Shared layout for popup (modal) forms.
  *
  * Apply `form-dialog` to an `NModal` (`preset="card"`):
- * - a unified dialog width;
+ * - half of the viewport by default (50vw, clamped to 360px..100vw-32px);
  * - a scrollable body capped at 70vh with the app scrollbar;
  * - the same two-column field grid as the add-menu dialog.
  *
@@ -10,7 +10,10 @@
  * Add `form-dialog--fullscreen` to make the dialog fill the viewport.
  */
 .form-dialog {
-  width: 800px;
+  // the dialogs take half of the viewport by default, with a readable floor and room for small screens
+  width: 50vw;
+  min-width: 360px;
+  max-width: calc(100vw - 32px);
 
   .n-card-content {
     max-height: 70vh;

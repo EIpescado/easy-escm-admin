@@ -176,7 +176,13 @@ const routeMap: RouteMap = {
   "manage_file": "/manage/file",
   "manage_menu": "/manage/menu",
   "manage_msg-template": "/manage/msg-template",
+  "manage_no": "/manage/no",
+  "manage_notice": "/manage/notice",
+  "manage_org": "/manage/org",
   "manage_role": "/manage/role",
+  "manage_special-file": "/manage/special-file",
+  "manage_third": "/manage/third",
+  "manage_third-template": "/manage/third-template",
   "manage_user": "/manage/user",
   "manage_user-detail": "/manage/user-detail/:id",
   "manage_user-dict": "/manage/user-dict"

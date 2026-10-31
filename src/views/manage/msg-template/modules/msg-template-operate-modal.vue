@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import type { FormRules } from 'naive-ui';
-import { fetchCreateMsgTemplate, fetchDictSelect, fetchMsgTemplateDetail, fetchUpdateMsgTemplate } from '@/service/api';
+import { fetchCreateMsgTemplate, fetchMsgTemplateDetail, fetchUpdateMsgTemplate } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
+import RemoteSelect from '@/components/advanced/remote-select.vue';
 
 defineOptions({
   name: 'MsgTemplateOperateModal'
@@ -31,30 +32,10 @@ const emit = defineEmits<Emits>();
 const { formRef, restoreValidation } = useNaiveForm();
 const { defaultRequiredRule } = useFormRules();
 
-/** template type options */
-const typeOptions = ref<Api.SystemManage.DictEntry[]>([]);
-/** entry type options */
-const entryTypeOptions = ref<Api.SystemManage.DictEntry[]>([]);
-
-const templateTypeSelectOptions = computed(() =>
-  typeOptions.value.map(entry => ({ label: entry.val || entry.code, value: entry.code }))
+/** label of the selected type, so an edit shows it before the remote page arrives */
+const typeFallback = computed(() =>
+  props.row?.type ? { label: props.row.typeVal || props.row.type, value: props.row.type } : null
 );
-
-const entryTypeSelectOptions = computed(() =>
-  entryTypeOptions.value.map(entry => ({ label: entry.val || entry.code, value: entry.code }))
-);
-
-async function loadDictOptions() {
-  if (!typeOptions.value.length) {
-    const { data } = await fetchDictSelect(DICT_TEMPLATE_TYPE);
-    typeOptions.value = data ?? [];
-  }
-
-  if (!entryTypeOptions.value.length) {
-    const { data } = await fetchDictSelect(DICT_ENTRY_TYPE);
-    entryTypeOptions.value = data ?? [];
-  }
-}
 
 interface TemplateModel {
   id?: string;
@@ -152,7 +133,6 @@ watch(visible, async val => {
 
   restoreValidation();
   resetForm();
-  loadDictOptions();
 
   const token = ++detailToken;
 
@@ -225,13 +205,12 @@ async function handleSubmit() {
       <template #label>
         <FormLabel :label="$t('page.manage.msgTemplate.type')" />
       </template>
-      <NSelect
+      <RemoteSelect
         v-model:value="model.type"
-        :options="templateTypeSelectOptions"
+        source="dict"
+        :dict-code="DICT_TEMPLATE_TYPE"
+        :fallback-option="typeFallback"
         :placeholder="$t('page.manage.msgTemplate.typePlaceholder')"
-        tag
-        filterable
-        clearable
       />
     </NFormItem>
     <NFormItem path="sn">
@@ -240,6 +219,11 @@ async function handleSubmit() {
       </template>
       <NInputNumber v-model:value="model.sn" :min="0" class="w-full" />
     </NFormItem>
+    <!--
+      placeholder cell: the body is a two-column grid, so it keeps the titles paired with their
+      descriptions below (title / title desc, subtitle / subtitle desc, remark / remark desc)
+    -->
+    <div />
     <NFormItem path="title">
       <template #label>
         <FormLabel :label="$t('page.manage.msgTemplate.title')" />
@@ -260,9 +244,27 @@ async function handleSubmit() {
     </NFormItem>
     <NFormItem path="subTitleDesc">
       <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.subTitleDesc')" />
+        <FormLabel
+          :label="$t('page.manage.msgTemplate.subTitleDesc')"
+          :tip="$t('page.manage.msgTemplate.subTitleDescTip')"
+        />
       </template>
       <NInput v-model:value="model.subTitleDesc" :placeholder="$t('page.manage.msgTemplate.subTitleDesc')" />
+    </NFormItem>
+    <NFormItem path="remark">
+      <template #label>
+        <FormLabel :label="$t('page.manage.msgTemplate.remark')" />
+      </template>
+      <NInput v-model:value="model.remark" :placeholder="$t('page.manage.msgTemplate.remark')" />
+    </NFormItem>
+    <NFormItem path="remarkDesc">
+      <template #label>
+        <FormLabel
+          :label="$t('page.manage.msgTemplate.remarkDesc')"
+          :tip="$t('page.manage.msgTemplate.remarkDescTip')"
+        />
+      </template>
+      <NInput v-model:value="model.remarkDesc" :placeholder="$t('page.manage.msgTemplate.remarkDesc')" />
     </NFormItem>
     <NFormItem path="whetherConfirm">
       <template #label>
@@ -282,18 +284,6 @@ async function handleSubmit() {
         <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
       </NRadioGroup>
     </NFormItem>
-    <NFormItem path="remark">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.remark')" />
-      </template>
-      <NInput v-model:value="model.remark" :placeholder="$t('page.manage.msgTemplate.remark')" />
-    </NFormItem>
-    <NFormItem path="remarkDesc">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.remarkDesc')" />
-      </template>
-      <NInput v-model:value="model.remarkDesc" :placeholder="$t('page.manage.msgTemplate.remarkDesc')" />
-    </NFormItem>
     <NFormItem class="col-span-2">
       <template #label>
         <FormLabel :label="$t('page.manage.msgTemplate.entries')" />
@@ -308,14 +298,12 @@ async function handleSubmit() {
                 :placeholder="$t('page.manage.msgTemplate.entrySn')"
                 class="w-100px shrink-0"
               />
-              <NSelect
+              <RemoteSelect
                 v-model:value="value.type"
-                :options="entryTypeSelectOptions"
+                source="dict"
+                :dict-code="DICT_ENTRY_TYPE"
                 :placeholder="$t('page.manage.msgTemplate.entryTypePlaceholder')"
                 class="w-150px shrink-0"
-                tag
-                filterable
-                clearable
               />
               <NInput
                 v-model:value="value.label"

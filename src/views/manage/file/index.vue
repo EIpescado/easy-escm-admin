@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref } from 'vue';
+import { computed, h, ref } from 'vue';
 import { NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
-import { fetchDictSelect, fetchFileDownload } from '@/service/api';
+import { fetchFileDownload } from '@/service/api';
 import type { PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { formatFileSize, getDownloadFileName, saveBlob } from '@/utils/file';
 import { getTodayRange } from '@/utils/date';
 import { $t } from '@/locales';
 import ManageList from '@/components/advanced/manage-list.vue';
 import type { QueryField } from '@/components/advanced/query-filter/types';
-import FileUploadModal from './modules/file-upload-modal.vue';
+import FileUploadModal from '@/components/advanced/file-upload-modal.vue';
+import FilePreviewModal from '@/components/advanced/file-preview-modal.vue';
 
 defineOptions({
   name: 'ManageFile'
@@ -17,22 +18,6 @@ defineOptions({
 
 /** dictionary holding the file tags, used by the tag column and the search / upload selects */
 const DICT_FILE_TAG = 'system_file_tag';
-
-/** file tag options of the `system_file_tag` dictionary */
-const tagOptions = ref<Api.SystemManage.DictEntry[]>([]);
-
-/** tag code → label, for the tag column */
-const tagLabelMap = computed(() => new Map(tagOptions.value.map(entry => [entry.code, entry.val || entry.code])));
-
-async function loadTagOptions() {
-  const { data, error } = await fetchDictSelect(DICT_FILE_TAG);
-
-  if (!error) {
-    tagOptions.value = data ?? [];
-  }
-}
-
-onMounted(loadTagOptions);
 
 /** Search fields of the query filter */
 const searchFields = computed<QueryField[]>(() => [
@@ -50,7 +35,7 @@ const searchFields = computed<QueryField[]>(() => [
     label: $t('page.manage.file.fileTag'),
     valueType: 'select',
     types: ['eq'],
-    options: tagOptions.value.map(entry => ({ label: entry.val || entry.code, value: entry.code }))
+    remote: { source: 'dict', dictCode: DICT_FILE_TAG }
   },
   { prop: 'creator', label: $t('page.manage.file.creator'), valueType: 'text', types: ['like'] }
 ]);
@@ -58,15 +43,32 @@ const searchFields = computed<QueryField[]>(() => [
 /** tag colors of the enum-like columns */
 type TagType = 'default' | 'primary' | 'info' | 'success' | 'warning' | 'error';
 
-/** render a value as a small tag, falling back to `-` when empty */
+/** render a value as a small tag, an empty value renders nothing */
 function renderTag(text: string | null | undefined, type: TagType = 'default') {
-  return h(NTag, { type, size: 'small', bordered: false }, { default: () => text || '-' });
+  if (!text) return '';
+
+  return h(NTag, { type, size: 'small', bordered: false }, { default: () => text });
 }
 
 /** Data columns; the selection column is added by the list */
 const columns = computed<NaiveUI.TableColumn<Api.SystemManage.SystemFile>[]>(() => [
   { key: 'id', title: $t('page.manage.file.id'), align: 'center', width: 190, ellipsis: { tooltip: true } },
-  { key: 'fileName', title: $t('page.manage.file.fileName'), minWidth: 220, ellipsis: { tooltip: true } },
+  {
+    key: 'fileName',
+    title: $t('page.manage.file.fileName'),
+    minWidth: 220,
+    ellipsis: { tooltip: true },
+    // the name opens the preview dialog; unsupported types get a hint and a download button there
+    render: row =>
+      h(
+        'a',
+        {
+          class: 'text-primary cursor-pointer',
+          onClick: () => openPreview(row)
+        },
+        row.fileName ?? ''
+      )
+  },
   {
     key: 'fileType',
     title: $t('page.manage.file.fileType'),
@@ -79,14 +81,14 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.SystemFile>[]>(() 
     title: $t('page.manage.file.fileSize'),
     align: 'center',
     width: 120,
-    render: row => formatFileSize(row.fileSize)
+    render: row => (row.fileSize ? formatFileSize(row.fileSize) : '')
   },
   {
     key: 'fileTag',
     title: $t('page.manage.file.fileTag'),
     align: 'center',
     minWidth: 120,
-    render: row => renderTag(tagLabelMap.value.get(row.fileTag ?? '') ?? row.fileTag, 'success')
+    render: row => renderTag(row.fileTagVal || row.fileTag, 'success')
   },
   {
     key: 'bucket',
@@ -160,6 +162,15 @@ const buttonRules: PageButtonStateRules<Api.SystemManage.SystemFile> = {
 
 const { bool: uploadVisible, setTrue: openUpload } = useBoolean();
 
+/** the file whose preview dialog is open */
+const { bool: previewVisible, setTrue: openPreviewModal } = useBoolean();
+const previewFile = ref<Api.SystemManage.SystemFile | null>(null);
+
+function openPreview(row: Api.SystemManage.SystemFile) {
+  previewFile.value = row;
+  openPreviewModal();
+}
+
 /** Toolbar buttons, dispatched by the backend button `click` (or the local fallbacks) */
 function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
   if (button.click === 'upload') {
@@ -208,6 +219,7 @@ async function handleSubmitted() {
       sortable
       @toolbar-action="handleToolbarAction"
     />
-    <FileUploadModal v-model:visible="uploadVisible" :tag-options="tagOptions" @submitted="handleSubmitted" />
+    <FileUploadModal v-model:visible="uploadVisible" @submitted="handleSubmitted" />
+    <FilePreviewModal v-model:visible="previewVisible" :file="previewFile" />
   </div>
 </template>

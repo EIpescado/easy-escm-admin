@@ -403,3 +403,119 @@ export function fetchToggleMsgTemplateState(id: string, enable: boolean) {
     data: { id }
   });
 }
+
+/** get a numbering rule detail */
+export function fetchNoRuleDetail(id: string) {
+  return request<Api.SystemManage.NoRule>({ url: '/system/no/detail', method: 'post', data: { id } });
+}
+
+/** create a numbering rule */
+export function fetchCreateNoRule(data: Api.SystemManage.NoRuleForm) {
+  return request<string>({ url: '/system/no', method: 'post', data });
+}
+
+/** update a numbering rule */
+export function fetchUpdateNoRule(data: Api.SystemManage.NoRuleForm) {
+  return request<string>({ url: '/system/no/update', method: 'post', data });
+}
+
+/** get an announcement detail (includes the content and the visibility targets) */
+export function fetchNoticeDetail(id: string) {
+  return request<Api.SystemManage.Notice>({ url: '/system/notice/detail', method: 'post', data: { id } });
+}
+
+/** create an announcement */
+export function fetchCreateNotice(data: Api.SystemManage.NoticeForm) {
+  return request<string>({ url: '/system/notice', method: 'post', data });
+}
+
+/** update an announcement */
+export function fetchUpdateNotice(data: Api.SystemManage.NoticeForm) {
+  return request<string>({ url: '/system/notice/update', method: 'post', data });
+}
+
+/** get an organization detail */
+export function fetchOrgDetail(id: string) {
+  return request<Api.SystemManage.Org>({ url: '/system/org/detail', method: 'post', data: { id } });
+}
+
+/** create an organization */
+export function fetchCreateOrg(data: Api.SystemManage.OrgForm) {
+  return request<string>({ url: '/system/org', method: 'post', data });
+}
+
+/** update an organization */
+export function fetchUpdateOrg(data: Api.SystemManage.OrgForm) {
+  return request<string>({ url: '/system/org/update', method: 'post', data });
+}
+
+/** enable or disable an organization */
+export function fetchToggleOrgState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/org/enable' : '/system/org/disable',
+    method: 'post',
+    data: { id }
+  });
+}
+
+/** get a special purpose file detail */
+export function fetchSpecialFileDetail(id: string) {
+  return request<Api.SystemManage.SpecialFile>({ url: '/system/specialFile/detail', method: 'post', data: { id } });
+}
+
+/** create a special purpose file */
+export function fetchCreateSpecialFile(data: Api.SystemManage.SpecialFileForm) {
+  return request<string>({ url: '/system/specialFile', method: 'post', data });
+}
+
+/** update a special purpose file */
+export function fetchUpdateSpecialFile(data: Api.SystemManage.SpecialFileForm) {
+  return request<string>({ url: '/system/specialFile/update', method: 'post', data });
+}
+
+/** enable or disable a special purpose file */
+export function fetchToggleSpecialFileState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/specialFile/enable' : '/system/specialFile/disable',
+    method: 'post',
+    data: { id }
+  });
+}
+
+/** create a third-party channel */
+export function fetchCreateThird(data: Api.SystemManage.ThirdChannelForm) {
+  return request<string>({ url: '/system/third', method: 'post', data });
+}
+
+/** update a third-party channel (the backend exposes no detail endpoint, the list row carries every field) */
+export function fetchUpdateThird(data: Api.SystemManage.ThirdChannelForm) {
+  return request<string>({ url: '/system/third/update', method: 'post', data });
+}
+
+/** enable or disable a third-party channel */
+export function fetchToggleThirdState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/third/enable' : '/system/third/disable',
+    method: 'post',
+    data: { id }
+  });
+}
+
+/** create the channel template of a message template */
+export function fetchCreateThirdTemplate(data: Api.SystemManage.ThirdTemplateForm) {
+  return request<string>({ url: '/system/thirdTemplate', method: 'post', data });
+}
+
+/** update the channel template of a message template */
+export function fetchUpdateThirdTemplate(data: Api.SystemManage.ThirdTemplateForm) {
+  return request<string>({ url: '/system/thirdTemplate/update', method: 'post', data });
+}
+
+/** enable or disable a channel template */
+export function fetchToggleThirdTemplateState(id: string, enable: boolean) {
+  return request<string>({
+    url: enable ? '/system/thirdTemplate/enable' : '/system/thirdTemplate/disable',
+    method: 'post',
+    data: { id }
+  });
+}

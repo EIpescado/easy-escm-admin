@@ -139,12 +139,66 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       },
       {
+        name: 'manage_no',
+        path: '/manage/no',
+        component: 'view.manage_no',
+        meta: {
+          title: 'manage_no',
+          i18nKey: 'route.manage_no'
+        }
+      },
+      {
+        name: 'manage_notice',
+        path: '/manage/notice',
+        component: 'view.manage_notice',
+        meta: {
+          title: 'manage_notice',
+          i18nKey: 'route.manage_notice'
+        }
+      },
+      {
+        name: 'manage_org',
+        path: '/manage/org',
+        component: 'view.manage_org',
+        meta: {
+          title: 'manage_org',
+          i18nKey: 'route.manage_org'
+        }
+      },
+      {
         name: 'manage_role',
         path: '/manage/role',
         component: 'view.manage_role',
         meta: {
           title: 'manage_role',
           i18nKey: 'route.manage_role'
+        }
+      },
+      {
+        name: 'manage_special-file',
+        path: '/manage/special-file',
+        component: 'view.manage_special-file',
+        meta: {
+          title: 'manage_special-file',
+          i18nKey: 'route.manage_special-file'
+        }
+      },
+      {
+        name: 'manage_third',
+        path: '/manage/third',
+        component: 'view.manage_third',
+        meta: {
+          title: 'manage_third',
+          i18nKey: 'route.manage_third'
+        }
+      },
+      {
+        name: 'manage_third-template',
+        path: '/manage/third-template',
+        component: 'view.manage_third-template',
+        meta: {
+          title: 'manage_third-template',
+          i18nKey: 'route.manage_third-template'
         }
       },
       {

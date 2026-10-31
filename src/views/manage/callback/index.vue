@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref } from 'vue';
-import { NTag } from 'naive-ui';
-import { fetchCallbackReExecute, fetchDictSelect } from '@/service/api';
+import { computed, h, ref } from 'vue';
+import { NButton, NTag } from 'naive-ui';
+import { fetchCallbackReExecute } from '@/service/api';
 import type { PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { showConfirmDialog } from '@/utils/common';
 import { getTodayRange } from '@/utils/date';
 import { $t } from '@/locales';
 import ManageList from '@/components/advanced/manage-list.vue';
 import type { QueryField } from '@/components/advanced/query-filter/types';
+import CallbackContentModal from './modules/callback-content-modal.vue';
 
 defineOptions({
   name: 'ManageCallback'
@@ -16,18 +17,37 @@ defineOptions({
 /** dictionary holding the callback types, used by the type column and the search select */
 const DICT_CALLBACK_TYPE = 'system_callback_type';
 
-/** callback type options of the `system_callback_type` dictionary */
-const typeOptions = ref<Api.SystemManage.DictEntry[]>([]);
+/** the JSON dialog of the request / response content */
+const contentVisible = ref(false);
+const contentTitle = ref('');
+const contentValue = ref<string | null>(null);
 
-async function loadTypeOptions() {
-  const { data, error } = await fetchDictSelect(DICT_CALLBACK_TYPE);
-
-  if (!error) {
-    typeOptions.value = data ?? [];
-  }
+function openContent(title: string, content?: string | null) {
+  contentTitle.value = title;
+  contentValue.value = content ?? null;
+  contentVisible.value = true;
 }
 
-onMounted(loadTypeOptions);
+/** render the content cell as a button that opens the JSON dialog */
+function renderContent(row: Api.SystemManage.Callback, key: 'requestContent' | 'responseContent') {
+  const content = row[key];
+
+  if (!content) return '';
+
+  return h(
+    NButton,
+    {
+      text: true,
+      type: 'primary',
+      onClick: () =>
+        openContent(
+          $t(key === 'requestContent' ? 'page.manage.callback.viewRequest' : 'page.manage.callback.viewResponse'),
+          content
+        )
+    },
+    { default: () => $t('page.manage.callback.view') }
+  );
+}
 
 /** yes / no options of the `showRequestContent` / `showResponseContent` flags */
 const flagOptions = computed(() => [
@@ -55,7 +75,7 @@ const searchFields = computed<QueryField[]>(() => [
     label: $t('page.manage.callback.type'),
     valueType: 'select',
     types: ['eq'],
-    options: typeOptions.value.map(entry => ({ label: entry.val || entry.code, value: entry.code }))
+    remote: { source: 'dict', dictCode: DICT_CALLBACK_TYPE }
   },
   { prop: 'name', label: $t('page.manage.callback.name'), valueType: 'text', types: ['like'] },
   {
@@ -94,8 +114,11 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.Callback>[]>(() =>
     title: $t('page.manage.callback.type'),
     align: 'center',
     width: 140,
-    render: row =>
-      h(NTag, { size: 'small', bordered: false, type: 'info' }, { default: () => row.typeVal || row.type || '-' })
+    render: row => {
+      const type = row.typeVal || row.type;
+
+      return type ? h(NTag, { size: 'small', bordered: false, type: 'info' }, { default: () => type }) : '';
+    }
   },
   { key: 'name', title: $t('page.manage.callback.name'), minWidth: 160, ellipsis: { tooltip: true } },
   {
@@ -104,7 +127,7 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.Callback>[]>(() =>
     align: 'center',
     width: 100,
     render: row => {
-      if (row.success === null || row.success === undefined) return '-';
+      if (row.success === null || row.success === undefined) return '';
 
       const ok = row.success;
 
@@ -129,14 +152,16 @@ const columns = computed<NaiveUI.TableColumn<Api.SystemManage.Callback>[]>(() =>
   {
     key: 'requestContent',
     title: $t('page.manage.callback.requestContent'),
-    minWidth: 220,
-    ellipsis: { tooltip: true }
+    align: 'center',
+    width: 100,
+    render: row => renderContent(row, 'requestContent')
   },
   {
     key: 'responseContent',
     title: $t('page.manage.callback.responseContent'),
-    minWidth: 220,
-    ellipsis: { tooltip: true }
+    align: 'center',
+    width: 100,
+    render: row => renderContent(row, 'responseContent')
   }
 ]);
 
@@ -213,5 +238,6 @@ function handleRowAction(row: Api.SystemManage.Callback, click: string) {
       selection
       @toolbar-action="handleToolbarAction"
     />
+    <CallbackContentModal v-model:visible="contentVisible" :title="contentTitle" :content="contentValue" />
   </div>
 </template>

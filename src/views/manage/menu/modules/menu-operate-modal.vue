@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import type { FormRules, TreeSelectOption } from 'naive-ui';
-import { fetchCreateButton, fetchCreateMenu, fetchRoleSelect, fetchUpdateButton, fetchUpdateMenu } from '@/service/api';
+import { fetchCreateButton, fetchCreateMenu, fetchUpdateButton, fetchUpdateMenu } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
+import RemoteSelect from '@/components/advanced/remote-select.vue';
 
 defineOptions({
   name: 'MenuOperateModal'
@@ -134,9 +135,6 @@ function fromNode(node: Api.SystemManage.MenuNode): EditModel {
 
 const model = reactive<EditModel>(createEmptyModel());
 
-/** route roles options */
-const roleOptions = ref<Api.SystemManage.Selector<string>[]>([]);
-
 const title = computed(() => {
   if (props.operateType === 'edit') return $t('common.edit');
   if (props.copying) return $t('system.button.copy');
@@ -235,7 +233,7 @@ const parentOptions = computed<TreeSelectOption[]>(() => [
   }
 ]);
 
-watch([visible, () => props.row], async ([val]) => {
+watch([visible, () => props.row], ([val]) => {
   if (!val) return;
 
   restoreValidation();
@@ -250,12 +248,6 @@ watch([visible, () => props.row], async ([val]) => {
   if (props.addTopMenu) {
     model.pid = '';
     model.component = 'root';
-  }
-
-  if (!roleOptions.value.length) {
-    const { data: roles } = await fetchRoleSelect();
-    // the select returns role rows; use `id` as value and `roleName` as label
-    roleOptions.value = (roles ?? []).map(role => ({ label: role.roleName, value: String(role.id) }));
   }
 });
 
@@ -431,10 +423,10 @@ async function handleSubmit() {
         <template #label>
           <FormLabel :label="$t('page.manage.menu.roles')" :tip="$t('page.manage.menu.tips.roles')" />
         </template>
-        <NSelect
+        <RemoteSelect
           v-model:value="model.meta.roles"
+          source="role"
           multiple
-          :options="roleOptions"
           :placeholder="$t('page.manage.menu.roles')"
         />
       </NFormItem>

@@ -5,6 +5,7 @@ import { fetchFileCheckChunk, fetchFileChunkUpload, fetchFileMergeChunk, fetchFi
 import { useNaiveForm } from '@/hooks/common/form';
 import { formatFileSize, getFileMd5 } from '@/utils/file';
 import { $t } from '@/locales';
+import RemoteSelect from '@/components/advanced/remote-select.vue';
 
 defineOptions({
   name: 'FileUploadModal'
@@ -13,20 +14,18 @@ defineOptions({
 /** files up to this size are uploaded in one request, larger ones in chunks (matches the backend default) */
 const SIMPLE_UPLOAD_LIMIT = 5 * 1024 * 1024;
 
+/** dictionary holding the file tags */
+const DICT_FILE_TAG = 'system_file_tag';
+
 /** the hashing / chunk phases own a slice of the 0-100 progress bar */
 const HASH_PROGRESS_END = 20;
 const CHUNK_PROGRESS_END = 90;
 
-interface Props {
-  /** file tag options, from the `system_file_tag` dictionary */
-  tagOptions: Api.SystemManage.DictEntry[];
-}
-
-const props = defineProps<Props>();
-
 const visible = defineModel<boolean>('visible', { default: false });
 
 interface Emits {
+  /** a file was stored by the backend */
+  (e: 'uploaded', file: Api.SystemManage.SystemFile): void;
   (e: 'submitted'): void;
 }
 
@@ -49,10 +48,6 @@ const phase = ref<UploadPhase>('idle');
 
 /** overall progress, 0-100 */
 const progress = ref(0);
-
-const tagSelectOptions = computed(() =>
-  props.tagOptions.map(entry => ({ label: entry.val || entry.code, value: entry.code }))
-);
 
 const rules: FormRules = {
   fileTag: {
@@ -106,9 +101,9 @@ watch(visible, val => {
  * The progress bar reserves the first {@link HASH_PROGRESS_END} percent for hashing and the last
  * tenth for the merge, the middle is the chunk transfer.
  *
- * @returns whether the file ended up stored by the backend
+ * @returns the stored file, or `null` when the upload failed
  */
-async function uploadInChunks(file: File, fileTag: string) {
+async function uploadInChunks(file: File, fileTag: string): Promise<Api.SystemManage.SystemFile | null> {
   phase.value = 'hashing';
   progress.value = 0;
 
@@ -124,13 +119,13 @@ async function uploadInChunks(file: File, fileTag: string) {
     fileSize: file.size
   });
 
-  if (checkError || !check) return false;
+  if (checkError || !check) return null;
 
   // instant upload: the backend already stores the same content
   if (check.uploaded) {
     progress.value = 100;
 
-    return true;
+    return check.file ?? null;
   }
 
   const chunkSize = Number(check.chunkSize) || SIMPLE_UPLOAD_LIMIT;
@@ -164,7 +159,7 @@ async function uploadInChunks(file: File, fileTag: string) {
       fileTag
     });
 
-    if (error) return false;
+    if (error) return null;
 
     uploadedBytes += chunk.size;
     updateProgress();
@@ -173,7 +168,7 @@ async function uploadInChunks(file: File, fileTag: string) {
   phase.value = 'merging';
   progress.value = CHUNK_PROGRESS_END;
 
-  const { error: mergeError } = await fetchFileMergeChunk({
+  const { data: merged, error: mergeError } = await fetchFileMergeChunk({
     identifier,
     fileName: file.name,
     totalChunks,
@@ -181,11 +176,11 @@ async function uploadInChunks(file: File, fileTag: string) {
     fileSize: file.size
   });
 
-  if (mergeError) return false;
+  if (mergeError) return null;
 
   progress.value = 100;
 
-  return true;
+  return merged ?? null;
 }
 
 /** upload a small file in one request */
@@ -193,13 +188,13 @@ async function uploadInOneRequest(file: File, fileTag: string) {
   phase.value = 'uploading';
   progress.value = 0;
 
-  const { error } = await fetchFileUpload({ file, fileTag });
+  const { data, error } = await fetchFileUpload({ file, fileTag });
 
-  if (error) return false;
+  if (error) return null;
 
   progress.value = 100;
 
-  return true;
+  return data ?? null;
 }
 
 async function handleSubmit() {
@@ -215,6 +210,7 @@ async function handleSubmit() {
     if (!uploaded) return;
 
     window.$message?.success($t('page.manage.file.uploadSuccess'));
+    emit('uploaded', uploaded);
     emit('submitted');
     visible.value = false;
   } finally {
@@ -240,11 +236,11 @@ async function handleSubmit() {
       <template #label>
         <FormLabel :label="$t('page.manage.file.fileTag')" />
       </template>
-      <NSelect
+      <RemoteSelect
         v-model:value="model.fileTag"
-        :options="tagSelectOptions"
+        source="dict"
+        :dict-code="DICT_FILE_TAG"
         :placeholder="$t('page.manage.file.selectFileTag')"
-        clearable
       />
     </NFormItem>
     <NFormItem path="file">

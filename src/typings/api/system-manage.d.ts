@@ -351,6 +351,8 @@ declare namespace Api {
       filePath?: string | null;
       /** file tag, refers to the `system_file_tag` dictionary */
       fileTag?: string | null;
+      /** translated label of `fileTag`, added by the backend `@DictField` writer */
+      fileTagVal?: string | null;
       /** uploader id */
       creatorId?: string | null;
       /** uploader name */
@@ -548,6 +550,191 @@ declare namespace Api {
       remark?: string | null;
       remarkDesc?: string | null;
       entryList?: MsgTemplateEntry[];
+    }
+
+    /** numbering rule (system_no), aligned with backend SystemNoTo / SystemNoVo */
+    interface NoRule {
+      id: string;
+      /** document type, e.g. PICK / DELIVERY / ORDER */
+      docType: string;
+      /** current sequence number, a Long returned as a string */
+      currentNo?: string | null;
+      /** number prefix */
+      prefix?: string | null;
+      /** rule description */
+      remark?: string | null;
+      /** time pattern, a java DateTimeFormatter pattern such as yyMMdd */
+      format?: string | null;
+      /** sequence digits, padded with leading zeros */
+      bit?: number | null;
+      /** numbers pre-generated per batch, default 10 */
+      batchNumber?: number | null;
+      /** number template with the placeholders {prefix} {time} {seq}, default {prefix}{time}{seq} */
+      template?: string | null;
+      /** last fetch time, used to reset the sequence when the time pattern changes */
+      lastFetchTime?: string | null;
+      creator?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+    }
+
+    /** numbering rule form, aligned with backend SystemNoFo */
+    interface NoRuleForm {
+      id?: string;
+      docType: string;
+      /** current sequence number, sent as a string to keep the Long precise */
+      currentNo?: string | null;
+      prefix?: string | null;
+      remark?: string | null;
+      format?: string | null;
+      bit?: number | null;
+      batchNumber?: number | null;
+      template?: string | null;
+    }
+
+    /** announcement (system_notice), aligned with backend SystemNoticeTo / SystemNoticeVo */
+    interface Notice {
+      id: string;
+      /** notice type, a `system_notice_type` dictionary code */
+      type?: string | null;
+      /** translated label of `type`, added by the backend `@DictField` writer */
+      typeVal?: string | null;
+      title?: string | null;
+      /** body, only returned by the detail endpoint */
+      content?: string | null;
+      /** effective time */
+      onTime?: string | null;
+      /** expiry time */
+      offTime?: string | null;
+      /** visibility targets, only returned by the detail endpoint */
+      targets?: NoticeTarget[] | null;
+      creator?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+    }
+
+    /** announcement visibility target, aligned with backend SystemNoticeFo.TargetItem */
+    interface NoticeTarget {
+      /** ORG / ROLE / LEVEL, a `system_notice_target_type` dictionary code */
+      targetType?: string | null;
+      /** code of the target, e.g. an org code or a role code */
+      targetCode?: string | null;
+    }
+
+    /** announcement form, aligned with backend SystemNoticeFo */
+    interface NoticeForm {
+      id?: string;
+      type: string;
+      title: string;
+      content: string;
+      onTime: string;
+      offTime: string;
+      targets?: NoticeTarget[];
+    }
+
+    /** organization (system_org), aligned with backend SystemOrgTo / SystemOrgVo */
+    interface Org {
+      id: string;
+      code: string;
+      name: string;
+      state?: string | null;
+      stateEnum?: string | null;
+      remark?: string | null;
+      creator?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+    }
+
+    /** organization form, aligned with backend SystemOrgFo */
+    interface OrgForm {
+      id?: string;
+      code: string;
+      name: string;
+      state?: string | null;
+      remark?: string | null;
+    }
+
+    /** special purpose file (system_special_file), aligned with backend SystemSpecialFileTo / Vo */
+    interface SpecialFile {
+      id: string;
+      code: string;
+      /** owner user id, empty means it applies to every user */
+      userId?: string | null;
+      fileId?: string | null;
+      fileName?: string | null;
+      state?: string | null;
+      stateEnum?: string | null;
+      remark?: string | null;
+      creator?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+    }
+
+    /** special purpose file form, aligned with backend SystemSpecialFileFo */
+    interface SpecialFileForm {
+      id?: string;
+      code: string;
+      userId?: string | null;
+      fileId?: string | null;
+      fileName?: string | null;
+      state?: string | null;
+      remark?: string | null;
+    }
+
+    /** third-party channel (system_third), aligned with backend SystemThirdTo */
+    interface ThirdChannel {
+      id: string;
+      /** channel type, a `system_third_type` dictionary code, e.g. MAIL / WX_CP */
+      type?: string | null;
+      /** translated label of `type`, added by the backend `@DictField` writer */
+      typeVal?: string | null;
+      name?: string | null;
+      /** channel config, a JSON document */
+      config?: string | null;
+      state?: string | null;
+      stateEnum?: string | null;
+      remark?: string | null;
+      creator?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+    }
+
+    /** third-party channel form, aligned with backend SystemThirdFo */
+    interface ThirdChannelForm {
+      id?: string;
+      type: string;
+      name: string;
+      config?: string | null;
+      state?: string | null;
+      remark?: string | null;
+    }
+
+    /** channel template of a message template (system_third_msg_template) */
+    interface ThirdTemplate {
+      id: string;
+      /** message template id (system_msg_template) */
+      templateId?: string | null;
+      /** third-party channel id (system_third) */
+      thirdId?: string | null;
+      name?: string | null;
+      /** template config, a JSON document */
+      config?: string | null;
+      state?: string | null;
+      remark?: string | null;
+      creator?: string | null;
+      createTime?: string | null;
+      updateTime?: string | null;
+    }
+
+    /** channel template form, aligned with backend SystemThirdMsgTemplateFo */
+    interface ThirdTemplateForm {
+      id?: string;
+      templateId?: string | null;
+      thirdId?: string | null;
+      name?: string | null;
+      config?: string | null;
+      state?: string | null;
+      remark?: string | null;
     }
   }
 }

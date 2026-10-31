@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import dayjs from 'dayjs';
 import { $t } from '@/locales';
+import RemoteSelect from '@/components/advanced/remote-select.vue';
 import { getOperatorValueKind, normalizeValues, type QueryField, type QueryOperator } from './types';
 
 defineOptions({
@@ -160,8 +161,20 @@ function handleEnter() {
   <span v-if="kind === 'none'" class="text-12px text-gray-400">--</span>
 
   <template v-else-if="kind === 'single'">
+    <RemoteSelect
+      v-if="valueType === 'select' && field?.remote"
+      :value="modelValue[0] ?? null"
+      :source="field.remote.source"
+      :dict-code="field.remote.dictCode"
+      :disabled="disabled"
+      :size="size"
+      :bordered="bordered"
+      :placeholder="placeholder"
+      class="w-full"
+      @update:value="value => setValue(Array.isArray(value) ? (value[0] ?? null) : value)"
+    />
     <NSelect
-      v-if="valueType === 'select'"
+      v-else-if="valueType === 'select'"
       :value="modelValue[0] ?? null"
       :options="options"
       :disabled="disabled"

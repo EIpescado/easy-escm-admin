@@ -64,6 +64,17 @@ export interface QueryField {
   types?: QueryOperator[];
   /** Options for `select` fields */
   options?: SelectOption[];
+  /**
+   * Remote options of a `select` field, loaded page by page with a keyword search
+   *
+   * Used where the option list is too large to load at once (dictionaries, users, roles): the
+   * value editor then renders a `RemoteSelect` instead of a plain `NSelect`.
+   */
+  remote?: {
+    source: 'dict' | 'user' | 'role';
+    /** dictionary code, required when `source` is `dict` */
+    dictCode?: string;
+  };
   /** Placeholder of the value editor */
   placeholder?: string;
   /**

@@ -154,7 +154,7 @@ async function handleSubmit() {
     </NFormItem>
     <NFormItem path="timeout">
       <template #label>
-        <FormLabel :label="$t('page.manage.client.timeout')" />
+        <FormLabel :label="$t('page.manage.client.timeout')" :tip="$t('page.manage.client.timeoutTip')" />
       </template>
       <NInputNumber v-model:value="model.timeout" :min="-1" class="w-full" />
     </NFormItem>

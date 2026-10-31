@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, watch } from 'vue';
+import { computed, h, reactive, watch } from 'vue';
 import type { FormRules, SelectOption } from 'naive-ui';
-import { fetchCreateUser, fetchRoleSelect, fetchUpdateUser } from '@/service/api';
+import { fetchCreateUser, fetchUpdateUser } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
+import RemoteSelect from '@/components/advanced/remote-select.vue';
 
 defineOptions({
   name: 'UserOperateModal'
@@ -42,8 +43,6 @@ interface RoleSelectOption extends SelectOption {
   remark?: string | null;
 }
 
-const roleOptions = ref<RoleSelectOption[]>([]);
-
 /** render the role name with its code and remark as secondary text */
 function renderRoleLabel(option: SelectOption) {
   const { roleCode, remark } = option as RoleSelectOption;
@@ -75,20 +74,8 @@ const rules: FormRules = {
   }
 };
 
-watch([visible, () => props.row], async ([val]) => {
+watch([visible, () => props.row], ([val]) => {
   if (!val) return;
-
-  if (!roleOptions.value.length) {
-    const { data: roles } = await fetchRoleSelect();
-
-    // the select returns role rows; use `id` as value and `roleName` as label
-    roleOptions.value = (roles || []).map(role => ({
-      label: role.roleName,
-      value: String(role.id),
-      roleCode: role.roleCode,
-      remark: role.remark
-    }));
-  }
 
   restoreValidation();
 
@@ -150,7 +137,13 @@ async function handleSubmit() {
       <template #label>
         <FormLabel :label="$t('page.manage.user.role')" />
       </template>
-      <NSelect v-model:value="model.roleIds" multiple :options="roleOptions" :render-label="renderRoleLabel" />
+      <RemoteSelect
+        v-model:value="model.roleIds"
+        source="role"
+        multiple
+        :render-label="renderRoleLabel"
+        :placeholder="$t('page.manage.user.role')"
+      />
     </NFormItem>
   </FormDialog>
 </template>

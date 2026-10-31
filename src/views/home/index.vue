@@ -3,7 +3,7 @@ import HeaderBanner from './modules/header-banner.vue';
 import CardData from './modules/card-data.vue';
 import LineChart from './modules/line-chart.vue';
 import PieChart from './modules/pie-chart.vue';
-import ProjectNews from './modules/project-news.vue';
+import LatestNotice from './modules/latest-notice.vue';
 import CreativityBanner from './modules/creativity-banner.vue';
 </script>
 
@@ -21,7 +21,7 @@ import CreativityBanner from './modules/creativity-banner.vue';
     </div>
     <div class="min-h-[220px] flex flex-1 gap-16px lt-lg:flex-col">
       <div class="min-h-0 min-w-0 flex-[7] lt-lg:min-h-[200px]">
-        <ProjectNews />
+        <LatestNotice />
       </div>
       <div class="min-h-0 min-w-0 flex-[5] lt-lg:min-h-[200px]">
         <CreativityBanner />

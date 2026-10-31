@@ -78,7 +78,7 @@ defineExpose({
   invalidateLabelWidth: () => formRef.value?.invalidateLabelWidth()
 });
 
-/** ignore the close attempts (mask, Esc, close icon) while the submit is in flight */
+/** ignore the close attempts (Esc, close icon) while the submit is in flight; the mask is never closable */
 function handleShowChange(value: boolean) {
   if (!value && submitting.value) return;
 
@@ -99,7 +99,12 @@ async function handleConfirm() {
   submitting.value = true;
 
   try {
-    await validate();
+    try {
+      await validate();
+    } catch {
+      // invalid form: naive-ui already renders the messages on the form items
+      return;
+    }
 
     await props.submit?.();
   } finally {
@@ -123,6 +128,7 @@ watch(visible, val => {
     :title="title"
     class="form-dialog"
     :class="{ 'form-dialog--fullscreen': fullscreen }"
+    :mask-closable="false"
     @update:show="handleShowChange"
   >
     <template #header-extra>
