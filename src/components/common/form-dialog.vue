@@ -29,6 +29,14 @@ interface Props {
    * twice. Provide a `footer` slot to replace the built-in buttons.
    */
   submit?: () => Promise<void> | void;
+  /**
+   * Custom card width, e.g. `72vw`
+   *
+   * Defaults to the 50vw of `form-dialog.scss`. Use it for a form that needs more room (such as the
+   * message template form with its side preview) instead of passing a `class`, which would land on
+   * the inner `NForm` because of `inheritAttrs: false`.
+   */
+  width?: string;
 }
 
 const props = defineProps<Props>();
@@ -128,6 +136,7 @@ watch(visible, val => {
     :title="title"
     class="form-dialog"
     :class="{ 'form-dialog--fullscreen': fullscreen }"
+    :style="!fullscreen && width ? { width } : undefined"
     :mask-closable="false"
     @update:show="handleShowChange"
   >

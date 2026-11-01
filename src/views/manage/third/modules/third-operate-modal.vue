@@ -185,6 +185,9 @@ watch(
   }
 );
 
+/** example of a raw config, shown when the selected type has no preset form */
+const CONFIG_PLACEHOLDER = '{"host":"smtp.example.com","username":"","password":""}';
+
 /** pretty print the JSON config, or keep it untouched while it is not valid JSON */
 function formatConfig() {
   try {
@@ -284,7 +287,7 @@ async function handleSubmit() {
         v-model:value="model.config"
         type="textarea"
         :rows="8"
-        placeholder='{"host":"smtp.example.com","username":"","password":""}'
+        :placeholder="CONFIG_PLACEHOLDER"
         class="font-mono"
       />
     </NFormItem>

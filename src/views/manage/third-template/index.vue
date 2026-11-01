@@ -4,7 +4,7 @@ import { useBoolean } from '@sa/hooks';
 import { fetchPageSearch, fetchToggleThirdTemplateState } from '@/service/api';
 import type { PageButtonStateRules } from '@/hooks/business/page-buttons';
 import { enableStateOptions } from '@/constants/business';
-import { TEMPLATE_CONFIG_FIELDS } from '@/constants/third-config';
+import { TEMPLATE_CONFIG_FIELDS, WX_MP_TYPE, parseMpTemplateConfig } from '@/constants/third-config';
 import { showConfirmDialog, translateOptions, formatConfigPreview } from '@/utils/common';
 import { $t } from '@/locales';
 import ManageList from '@/components/advanced/manage-list.vue';
@@ -132,11 +132,23 @@ const columns = computed<ManageColumn<Api.SystemManage.ThirdTemplate>[]>(() => [
     title: $t('page.manage.thirdTemplate.config'),
     minWidth: 220,
     ellipsis: { tooltip: true },
-    render: row =>
-      formatConfigPreview(
-        row.config,
-        row.thirdId ? TEMPLATE_CONFIG_FIELDS[channelTypeMap.value.get(row.thirdId) ?? ''] : undefined
-      )
+    render: row => {
+      const type = (row.thirdId && channelTypeMap.value.get(row.thirdId)) || '';
+
+      // the Official Account config is a WeChat template id plus its key mapping
+      if (type === WX_MP_TYPE) {
+        const config = parseMpTemplateConfig(row.config);
+
+        if (!config) return '';
+
+        return $t('page.manage.thirdTemplate.mpPreview', {
+          name: config.title || config.templateId,
+          count: Object.keys(config.mapping).length
+        });
+      }
+
+      return formatConfigPreview(row.config, TEMPLATE_CONFIG_FIELDS[type]);
+    }
   },
   { key: 'state', title: $t('page.manage.thirdTemplate.state'), align: 'center', width: 100, cell: 'enabled' },
   { key: 'remark', title: $t('page.manage.thirdTemplate.remark'), minWidth: 150, ellipsis: { tooltip: true } },

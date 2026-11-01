@@ -4,7 +4,8 @@ import type { FormRules } from 'naive-ui';
 import { fetchCreateThirdTemplate, fetchPageSearch, fetchUpdateThirdTemplate } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
-import { TEMPLATE_CONFIG_FIELDS } from '@/constants/third-config';
+import { TEMPLATE_CONFIG_FIELDS, WX_MP_TYPE } from '@/constants/third-config';
+import MpTemplateConfig from './mp-template-config.vue';
 
 defineOptions({
   name: 'ThirdTemplateOperateModal'
@@ -112,32 +113,50 @@ const selectedType = computed(() => selectedChannel.value?.type ?? null);
 /** fields of the current channel type; `undefined` for a type without template config */
 const configFields = computed(() => (selectedType.value ? TEMPLATE_CONFIG_FIELDS[selectedType.value] : undefined));
 
-/** what the config area renders: pick a channel / the type form / no config / JSON fallback */
-const configMode = computed<'pending' | 'form' | 'none' | 'json'>(() => {
+/** appId of the selected Official Account channel, needed to read its template messages */
+const mpAppId = computed(() => {
+  const raw = selectedChannel.value?.config;
+
+  if (!raw) return '';
+
+  try {
+    return ((JSON.parse(raw) as { appId?: string }).appId ?? '').trim();
+  } catch {
+    return '';
+  }
+});
+
+/** what the config area renders: pick a channel / the type form / the Official Account editor / no config / JSON */
+const configMode = computed<'pending' | 'form' | 'mp' | 'none' | 'json'>(() => {
   if (!model.thirdId || !channelsLoaded.value) return 'pending';
 
   // the channel is not part of the loaded page: fall back to the raw JSON
   if (!selectedType.value) return 'json';
 
+  if (selectedType.value === WX_MP_TYPE) return 'mp';
+
   return configFields.value ? 'form' : 'none';
 });
-
-/** hint of the `none` mode: the Official Account keeps its template ids in a dictionary instead */
-const noConfigTip = computed(() =>
-  selectedType.value === 'WX_MP'
-    ? $t('page.manage.thirdTemplate.noConfigMpTip')
-    : $t('page.manage.thirdTemplate.noConfigTip')
-);
 
 const title = computed(() =>
   $t(props.operateType === 'add' ? 'page.manage.thirdTemplate.createTitle' : 'page.manage.thirdTemplate.editTitle')
 );
 
-const rules: FormRules = {
+/** an Official Account template can only be bound once one of its templates is picked */
+const rules = computed<FormRules>(() => ({
   templateId: defaultRequiredRule,
   thirdId: defaultRequiredRule,
-  name: defaultRequiredRule
-};
+  name: defaultRequiredRule,
+  ...(selectedType.value === WX_MP_TYPE
+    ? {
+        config: {
+          required: true,
+          message: $t('page.manage.thirdTemplate.mpTemplateRequired'),
+          trigger: ['change', 'blur']
+        }
+      }
+    : {})
+}));
 
 function clearConfigValues() {
   Object.keys(configValues).forEach(key => {
@@ -216,6 +235,9 @@ watch(visible, val => {
 watch(configFields, () => {
   fillConfig(model.config);
 });
+
+/** example of a raw config, shown when the selected system has no preset form */
+const CONFIG_PLACEHOLDER = '{"subject":"Order {orderNo}","ftl":"default_mail.ftlh"}';
 
 /** pretty print the JSON config, or keep it untouched while it is not valid JSON */
 function formatConfig() {
@@ -308,11 +330,18 @@ async function handleSubmit() {
       </NFormItem>
     </template>
 
+    <NFormItem v-else-if="configMode === 'mp'" class="col-span-2" path="config">
+      <template #label>
+        <FormLabel :label="$t('page.manage.thirdTemplate.config')" :tip="$t('page.manage.thirdTemplate.mpConfigTip')" />
+      </template>
+      <MpTemplateConfig v-model:config="model.config" :app-id="mpAppId" :msg-template-id="model.templateId" />
+    </NFormItem>
+
     <NFormItem v-else-if="configMode === 'none'" class="col-span-2">
       <template #label>
         <FormLabel :label="$t('page.manage.thirdTemplate.config')" />
       </template>
-      <NAlert type="info" :bordered="false">{{ noConfigTip }}</NAlert>
+      <NAlert type="info" :bordered="false">{{ $t('page.manage.thirdTemplate.noConfigTip') }}</NAlert>
     </NFormItem>
 
     <NFormItem v-else class="col-span-2">
@@ -328,7 +357,7 @@ async function handleSubmit() {
         v-model:value="model.config"
         type="textarea"
         :rows="6"
-        placeholder='{"subject":"Order {orderNo}","ftl":"default_mail.ftlh"}'
+        :placeholder="CONFIG_PLACEHOLDER"
         class="font-mono"
       />
     </NFormItem>

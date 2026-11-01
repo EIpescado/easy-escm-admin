@@ -11,6 +11,7 @@ import ManageList from '@/components/advanced/manage-list.vue';
 import type { QueryField } from '@/components/advanced/query-filter/types';
 import type { ManageColumn } from '@/utils/table';
 import MsgTemplateOperateModal from './modules/msg-template-operate-modal.vue';
+import MsgTemplatePreviewModal from './modules/msg-template-preview-modal.vue';
 
 defineOptions({
   name: 'ManageMsgTemplate'
@@ -59,7 +60,22 @@ const columns = computed<ManageColumn<Api.SystemManage.MsgTemplate>[]>(() => [
       return type ? h(NTag, { size: 'small', bordered: false, type: 'info' }, { default: () => type }) : '';
     }
   },
-  { key: 'title', title: $t('page.manage.msgTemplate.title'), minWidth: 160, ellipsis: { tooltip: true } },
+  {
+    key: 'title',
+    title: $t('page.manage.msgTemplate.title'),
+    minWidth: 160,
+    ellipsis: { tooltip: true },
+    // the title opens a read-only message preview
+    render: row =>
+      h(
+        'a',
+        {
+          class: 'text-primary cursor-pointer',
+          onClick: () => openPreview(row)
+        },
+        row.title ?? ''
+      )
+  },
   {
     key: 'titleDesc',
     title: $t('page.manage.msgTemplate.titleDesc'),
@@ -100,6 +116,15 @@ async function refreshList() {
 const { bool: modalVisible, setTrue: openModal, setFalse: closeModal } = useBoolean();
 const operateType = ref<NaiveUI.TableOperateType>('add');
 const editingData = ref<Api.SystemManage.MsgTemplate | null>(null);
+
+/** read-only preview opened from the title column */
+const { bool: previewVisible, setTrue: openPreviewModal } = useBoolean();
+const previewData = ref<Api.SystemManage.MsgTemplate | null>(null);
+
+function openPreview(row: Api.SystemManage.MsgTemplate) {
+  previewData.value = row;
+  openPreviewModal();
+}
 
 function handleAdd() {
   operateType.value = 'add';
@@ -193,5 +218,6 @@ async function handleSubmitted() {
       :row="editingData"
       @submitted="handleSubmitted"
     />
+    <MsgTemplatePreviewModal v-model:visible="previewVisible" :template="previewData" />
   </div>
 </template>

@@ -736,5 +736,35 @@ declare namespace Api {
       state?: string | null;
       remark?: string | null;
     }
+
+    /** template message of a WeChat Official Account, aligned with backend `WxMpTemplate` */
+    interface MpTemplate {
+      /** WeChat template message id */
+      templateId: string;
+      /** WeChat template title */
+      title?: string | null;
+      primaryIndustry?: string | null;
+      deputyIndustry?: string | null;
+      /** template content, e.g. `{{first.DATA}}\n订单号{{keyword1.DATA}}` */
+      content?: string | null;
+      /** example filled into the content */
+      example?: string | null;
+    }
+
+    /**
+     * Raw template message of a WeChat Official Account
+     *
+     * The backend serializes the weixin bean directly, so it arrives with snake_case keys.
+     */
+    interface MpTemplateResponse {
+      template_id?: string;
+      /** present when the serializer is switched to camelCase */
+      templateId?: string;
+      title?: string | null;
+      primary_industry?: string | null;
+      deputy_industry?: string | null;
+      content?: string | null;
+      example?: string | null;
+    }
   }
 }

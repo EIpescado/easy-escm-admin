@@ -84,6 +84,7 @@ export const CHANNEL_CONFIG_FIELDS: Record<string, ConfigField[]> = {
  *
  * Mirrors the backend config class read by the channel: mail uses
  * `SystemThirdMsgTemplate.MailMapping` (`subject` / `ftl`); the WeCom channels read no template config.
+ * The Official Account ({@link WX_MP_TYPE}) has a dedicated editor, see {@link MpTemplateConfig}.
  */
 export const TEMPLATE_CONFIG_FIELDS: Record<string, ConfigField[]> = {
   MAIL: [
@@ -91,3 +92,65 @@ export const TEMPLATE_CONFIG_FIELDS: Record<string, ConfigField[]> = {
     { key: 'ftl', label: 'page.manage.thirdTemplate.fieldFtl', tip: 'page.manage.thirdTemplate.fieldFtlTip' }
   ]
 };
+
+/** channel type of a WeChat Official Account */
+export const WX_MP_TYPE = 'WX_MP';
+
+/**
+ * Template config of an Official Account channel
+ *
+ * The account template is picked from WeChat (`getAllPrivateTemplate`), then every message parameter
+ * is mapped onto one of its keys: `subTitle` → `first`, the template entries → `keyword1..n`,
+ * `remark` → `remark`.
+ */
+export interface MpTemplateConfig {
+  /** WeChat template message id */
+  templateId: string;
+  /** WeChat template title, kept so the list can show it without asking WeChat */
+  title?: string;
+  /** message parameter name (`subTitle` / entry prop / `remark`) → WeChat template key */
+  mapping: Record<string, string>;
+}
+
+/** parse a stored {@link MpTemplateConfig}, `null` when the JSON is empty or has no template id */
+export function parseMpTemplateConfig(raw: string | null | undefined): MpTemplateConfig | null {
+  if (!raw?.trim()) return null;
+
+  let parsed: Partial<MpTemplateConfig>;
+
+  try {
+    parsed = JSON.parse(raw) as Partial<MpTemplateConfig>;
+  } catch {
+    return null;
+  }
+
+  if (!parsed?.templateId) return null;
+
+  const mapping: Record<string, string> = {};
+
+  Object.entries(parsed.mapping ?? {}).forEach(([key, value]) => {
+    if (value) mapping[key] = String(value);
+  });
+
+  return {
+    templateId: String(parsed.templateId),
+    title: parsed.title ? String(parsed.title) : undefined,
+    mapping
+  };
+}
+
+/** keys of a WeChat template content, in the order they appear, e.g. `['first', 'keyword1', 'remark']` */
+export function parseMpTemplateKeys(content: string | null | undefined): string[] {
+  const keys: string[] = [];
+  const pattern = /\{\{\s*([A-Za-z0-9_]+)\.DATA\s*\}\}/g;
+
+  let match = pattern.exec(content ?? '');
+
+  while (match) {
+    if (!keys.includes(match[1])) keys.push(match[1]);
+
+    match = pattern.exec(content ?? '');
+  }
+
+  return keys;
+}

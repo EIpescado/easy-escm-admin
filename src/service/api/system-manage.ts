@@ -519,3 +519,29 @@ export function fetchToggleThirdTemplateState(id: string, enable: boolean) {
     data: { id }
   });
 }
+
+/**
+ * Template messages of a WeChat Official Account
+ *
+ * The backend proxies `getAllPrivateTemplate` of the account configured by `appId`. Its response
+ * serializes the weixin `WxMpTemplate` bean as-is, so the fields are snake_case on the wire.
+ */
+export async function fetchMpTemplateList(appId: string) {
+  const { data, error } = await request<Api.SystemManage.MpTemplateResponse[]>({
+    url: `/wx/mp/${appId}/getAllMpPrivateTemplate`,
+    method: 'get'
+  });
+
+  return {
+    error,
+    data:
+      data?.map(item => ({
+        templateId: item.template_id ?? item.templateId ?? '',
+        title: item.title ?? null,
+        primaryIndustry: item.primary_industry ?? null,
+        deputyIndustry: item.deputy_industry ?? null,
+        content: item.content ?? null,
+        example: item.example ?? null
+      })) ?? null
+  };
+}

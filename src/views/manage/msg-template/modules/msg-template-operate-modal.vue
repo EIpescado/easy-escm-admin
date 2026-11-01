@@ -5,6 +5,7 @@ import { fetchCreateMsgTemplate, fetchMsgTemplateDetail, fetchUpdateMsgTemplate 
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
 import RemoteSelect from '@/components/advanced/remote-select.vue';
+import MsgTemplatePreview from './msg-template-preview.vue';
 
 defineOptions({
   name: 'MsgTemplateOperateModal'
@@ -194,147 +195,154 @@ async function handleSubmit() {
     :model="model"
     :rules="rules"
     :submit="handleSubmit"
+    width="72vw"
   >
-    <NFormItem path="code">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.code')" />
-      </template>
-      <NInput v-model:value="model.code" :placeholder="$t('page.manage.msgTemplate.code')" />
-    </NFormItem>
-    <NFormItem path="type">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.type')" />
-      </template>
-      <RemoteSelect
-        v-model:value="model.type"
-        source="dict"
-        :dict-code="DICT_TEMPLATE_TYPE"
-        :fallback-option="typeFallback"
-        :placeholder="$t('page.manage.msgTemplate.typePlaceholder')"
-      />
-    </NFormItem>
-    <NFormItem path="sn">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.sn')" />
-      </template>
-      <NInputNumber v-model:value="model.sn" :min="0" class="w-full" />
-    </NFormItem>
-    <!--
+    <div class="col-span-2 flex items-start gap-20px">
+      <div class="min-w-0 flex-1 grid grid-cols-2 gap-x-16px gap-y-4px">
+        <NFormItem path="code">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.code')" />
+          </template>
+          <NInput v-model:value="model.code" :placeholder="$t('page.manage.msgTemplate.code')" />
+        </NFormItem>
+        <NFormItem path="type">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.type')" />
+          </template>
+          <RemoteSelect
+            v-model:value="model.type"
+            source="dict"
+            :dict-code="DICT_TEMPLATE_TYPE"
+            :fallback-option="typeFallback"
+            :placeholder="$t('page.manage.msgTemplate.typePlaceholder')"
+          />
+        </NFormItem>
+        <NFormItem path="sn">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.sn')" />
+          </template>
+          <NInputNumber v-model:value="model.sn" :min="0" class="w-full" />
+        </NFormItem>
+        <!--
       placeholder cell: the body is a two-column grid, so it keeps the titles paired with their
       descriptions below (title / title desc, subtitle / subtitle desc, remark / remark desc)
     -->
-    <div />
-    <NFormItem path="title">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.title')" />
-      </template>
-      <NInput v-model:value="model.title" :placeholder="$t('page.manage.msgTemplate.title')" />
-    </NFormItem>
-    <NFormItem path="titleDesc">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.titleDesc')" />
-      </template>
-      <NInput v-model:value="model.titleDesc" :placeholder="$t('page.manage.msgTemplate.titleDesc')" />
-    </NFormItem>
-    <NFormItem path="subTitle">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.subTitle')" />
-      </template>
-      <NInput v-model:value="model.subTitle" :placeholder="$t('page.manage.msgTemplate.subTitle')" />
-    </NFormItem>
-    <NFormItem path="subTitleDesc">
-      <template #label>
-        <FormLabel
-          :label="$t('page.manage.msgTemplate.subTitleDesc')"
-          :tip="$t('page.manage.msgTemplate.subTitleDescTip')"
-        />
-      </template>
-      <NInput v-model:value="model.subTitleDesc" :placeholder="$t('page.manage.msgTemplate.subTitleDesc')" />
-    </NFormItem>
-    <NFormItem path="remark">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.remark')" />
-      </template>
-      <NInput v-model:value="model.remark" :placeholder="$t('page.manage.msgTemplate.remark')" />
-    </NFormItem>
-    <NFormItem path="remarkDesc">
-      <template #label>
-        <FormLabel
-          :label="$t('page.manage.msgTemplate.remarkDesc')"
-          :tip="$t('page.manage.msgTemplate.remarkDescTip')"
-        />
-      </template>
-      <NInput v-model:value="model.remarkDesc" :placeholder="$t('page.manage.msgTemplate.remarkDesc')" />
-    </NFormItem>
-    <NFormItem path="whetherConfirm">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.whetherConfirm')" />
-      </template>
-      <NRadioGroup v-model:value="model.whetherConfirm">
-        <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
-        <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
-      </NRadioGroup>
-    </NFormItem>
-    <NFormItem path="hidden">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.hidden')" />
-      </template>
-      <NRadioGroup v-model:value="model.hidden">
-        <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
-        <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
-      </NRadioGroup>
-    </NFormItem>
-    <NFormItem class="col-span-2">
-      <template #label>
-        <FormLabel :label="$t('page.manage.msgTemplate.entries')" />
-      </template>
-      <NDynamicInput v-model:value="entries" :on-create="createEntry">
-        <template #default="{ value }">
-          <div class="w-full flex flex-col gap-8px">
-            <div class="w-full flex items-center gap-8px">
-              <NInputNumber
-                v-model:value="value.sn"
-                :min="0"
-                :placeholder="$t('page.manage.msgTemplate.entrySn')"
-                class="w-100px shrink-0"
-              />
-              <RemoteSelect
-                v-model:value="value.type"
-                source="dict"
-                :dict-code="DICT_ENTRY_TYPE"
-                :placeholder="$t('page.manage.msgTemplate.entryTypePlaceholder')"
-                class="w-150px shrink-0"
-              />
-              <NInput
-                v-model:value="value.label"
-                :placeholder="$t('page.manage.msgTemplate.entryLabel')"
-                class="min-w-0 flex-1"
-              />
-              <NInput
-                v-model:value="value.prop"
-                :placeholder="$t('page.manage.msgTemplate.entryProp')"
-                class="min-w-0 flex-1"
-              />
-            </div>
-            <div class="w-full flex items-center gap-8px">
-              <NInput
-                v-model:value="value.val"
-                :placeholder="$t('page.manage.msgTemplate.entryVal')"
-                class="min-w-0 flex-1"
-              />
-              <NInput
-                v-model:value="value.labelDesc"
-                :placeholder="$t('page.manage.msgTemplate.entryLabelDesc')"
-                class="min-w-0 flex-1"
-              />
-              <div class="w-120px shrink-0">
-                <NInput v-model:value="value.color" :placeholder="$t('page.manage.msgTemplate.entryColor')" />
+        <div />
+        <NFormItem path="title">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.title')" />
+          </template>
+          <NInput v-model:value="model.title" :placeholder="$t('page.manage.msgTemplate.title')" />
+        </NFormItem>
+        <NFormItem path="titleDesc">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.titleDesc')" />
+          </template>
+          <NInput v-model:value="model.titleDesc" :placeholder="$t('page.manage.msgTemplate.titleDesc')" />
+        </NFormItem>
+        <NFormItem path="subTitle">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.subTitle')" />
+          </template>
+          <NInput v-model:value="model.subTitle" :placeholder="$t('page.manage.msgTemplate.subTitle')" />
+        </NFormItem>
+        <NFormItem path="subTitleDesc">
+          <template #label>
+            <FormLabel
+              :label="$t('page.manage.msgTemplate.subTitleDesc')"
+              :tip="$t('page.manage.msgTemplate.subTitleDescTip')"
+            />
+          </template>
+          <NInput v-model:value="model.subTitleDesc" :placeholder="$t('page.manage.msgTemplate.subTitleDesc')" />
+        </NFormItem>
+        <NFormItem path="remark">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.remark')" />
+          </template>
+          <NInput v-model:value="model.remark" :placeholder="$t('page.manage.msgTemplate.remark')" />
+        </NFormItem>
+        <NFormItem path="remarkDesc">
+          <template #label>
+            <FormLabel
+              :label="$t('page.manage.msgTemplate.remarkDesc')"
+              :tip="$t('page.manage.msgTemplate.remarkDescTip')"
+            />
+          </template>
+          <NInput v-model:value="model.remarkDesc" :placeholder="$t('page.manage.msgTemplate.remarkDesc')" />
+        </NFormItem>
+        <NFormItem path="whetherConfirm">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.whetherConfirm')" />
+          </template>
+          <NRadioGroup v-model:value="model.whetherConfirm">
+            <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
+            <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
+          </NRadioGroup>
+        </NFormItem>
+        <NFormItem path="hidden">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.hidden')" />
+          </template>
+          <NRadioGroup v-model:value="model.hidden">
+            <NRadio :value="true">{{ $t('common.yesOrNo.yes') }}</NRadio>
+            <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
+          </NRadioGroup>
+        </NFormItem>
+        <NFormItem class="col-span-2">
+          <template #label>
+            <FormLabel :label="$t('page.manage.msgTemplate.entries')" />
+          </template>
+          <NDynamicInput v-model:value="entries" :on-create="createEntry">
+            <template #default="{ value }">
+              <div class="w-full flex flex-col gap-8px">
+                <div class="w-full flex items-center gap-8px">
+                  <NInputNumber
+                    v-model:value="value.sn"
+                    :min="0"
+                    :placeholder="$t('page.manage.msgTemplate.entrySn')"
+                    class="w-100px shrink-0"
+                  />
+                  <RemoteSelect
+                    v-model:value="value.type"
+                    source="dict"
+                    :dict-code="DICT_ENTRY_TYPE"
+                    :placeholder="$t('page.manage.msgTemplate.entryTypePlaceholder')"
+                    class="w-150px shrink-0"
+                  />
+                  <NInput
+                    v-model:value="value.label"
+                    :placeholder="$t('page.manage.msgTemplate.entryLabel')"
+                    class="min-w-0 flex-1"
+                  />
+                  <NInput
+                    v-model:value="value.prop"
+                    :placeholder="$t('page.manage.msgTemplate.entryProp')"
+                    class="min-w-0 flex-1"
+                  />
+                </div>
+                <div class="w-full flex items-center gap-8px">
+                  <NInput
+                    v-model:value="value.val"
+                    :placeholder="$t('page.manage.msgTemplate.entryVal')"
+                    class="min-w-0 flex-1"
+                  />
+                  <NInput
+                    v-model:value="value.labelDesc"
+                    :placeholder="$t('page.manage.msgTemplate.entryLabelDesc')"
+                    class="min-w-0 flex-1"
+                  />
+                  <div class="w-120px shrink-0">
+                    <NInput v-model:value="value.color" :placeholder="$t('page.manage.msgTemplate.entryColor')" />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </template>
-      </NDynamicInput>
-    </NFormItem>
+            </template>
+          </NDynamicInput>
+        </NFormItem>
+      </div>
+
+      <MsgTemplatePreview class="sticky top-0 hidden w-320px shrink-0 xl:block" :model="model" :entries="entries" />
+    </div>
   </FormDialog>
 </template>
 
