@@ -102,6 +102,14 @@ export interface QueryField {
    * already carries the default and the filter shows the values.
    */
   defaultValues?: string[];
+  /**
+   * Table alias of the prop
+   *
+   * The search SQL of some lists joins a side table whose columns are not on the main entity (e.g.
+   * the message content lives in `system_msg_content c`); such a condition must name the alias, the
+   * backend applies a condition without alias to the main table only.
+   */
+  alias?: string;
 }
 
 /** One condition edited by the query filter (backend query item + a local id) */
@@ -110,6 +118,8 @@ export interface QueryFilterCondition {
   prop: string;
   type: QueryOperator;
   values: string[];
+  /** table alias of the prop, for a column of a table joined by the search SQL */
+  alias?: string;
   /**
    * The props of the `fast` fields merged into this condition, only set for the keyword condition
    *
@@ -256,6 +266,7 @@ export function createCondition(field: QueryField, overrides?: Partial<QueryFilt
     type: getDefaultOperator(field),
     values: [],
     param: field.param,
+    alias: field.alias,
     ...overrides
   };
 }
@@ -291,10 +302,16 @@ export function toQueryItems(conditions: QueryFilterCondition[]): Api.SystemMana
       const values = normalizeValues(condition.type, condition.values).map(String);
 
       if (condition.fastProps?.length) {
-        return condition.fastProps.map(prop => ({ prop, type: condition.type, values, fast: true }));
+        return condition.fastProps.map(prop => ({
+          prop,
+          type: condition.type,
+          values,
+          fast: true,
+          alias: condition.alias
+        }));
       }
 
-      return { prop: condition.prop, type: condition.type, values };
+      return { prop: condition.prop, type: condition.type, values, alias: condition.alias };
     });
 }
 

@@ -493,6 +493,22 @@ declare namespace Api {
       remark?: string | null;
     }
 
+    /** system message received by the current user, aligned with backend SystemMsgTo */
+    interface SystemMsg {
+      id: string;
+      /** id of the checklist the message is about */
+      confirmationId?: string | null;
+      haveRead?: boolean | null;
+      readTime?: string | null;
+      /** message type, a `system_msg_template_type` dictionary code */
+      type?: string | null;
+      /** translated label of `type`, added by the backend `@DictField` writer */
+      typeVal?: string | null;
+      content?: string | null;
+      creator?: string | null;
+      createTime?: string | null;
+    }
+
     /** message template entry, aligned with backend MsgTemplate.Entry */
     interface MsgTemplateEntry {
       sn?: number | null;

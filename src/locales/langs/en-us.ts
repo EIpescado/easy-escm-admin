@@ -95,6 +95,12 @@ const local: App.I18n.Schema = {
       no: 'No'
     }
   },
+  messageCenter: {
+    title: 'Message Center',
+    emptyUnread: 'No unread messages',
+    noMore: 'No more messages',
+    viewAll: 'Go to Message Center'
+  },
   request: {
     logout: 'Logout user after request failed',
     logoutMsg: 'User status is invalid, please log in again',
@@ -292,6 +298,7 @@ const local: App.I18n.Schema = {
     manage_third: 'Third-party Systems',
     'manage_third-template': 'Third Party Template',
     'manage_msg-template': 'Message Template',
+    'msg-center': 'Message Center',
     'manage_user-dict': 'User Dictionary',
     'manage_user-detail': 'User Detail'
   },
@@ -551,6 +558,14 @@ const local: App.I18n.Schema = {
         createTitle: 'Create Client',
         editTitle: 'Edit Client'
       },
+      msg: {
+        type: 'Type',
+        content: 'Content',
+        haveRead: 'Read',
+        read: 'Read',
+        unread: 'Unread',
+        createTime: 'Received At'
+      },
       msgTemplate: {
         code: 'Code',
         type: 'Type',
@@ -576,7 +591,6 @@ const local: App.I18n.Schema = {
         entryLabelDesc: 'Label Description',
         entryVal: 'Default Value',
         entryProp: 'Field Name',
-        entryColor: 'Color',
         preview: 'Live Preview',
         previewEmpty: 'Fill in the form to preview the message',
         previewTitlePlaceholder: 'Untitled',

@@ -7,6 +7,7 @@ import GlobalLogo from '../global-logo/index.vue';
 import GlobalBreadcrumb from '../global-breadcrumb/index.vue';
 import GlobalSearch from '../global-search/index.vue';
 import OrgName from './components/org-name.vue';
+import MessageCenter from './components/message-center.vue';
 import ThemeButton from './components/theme-button.vue';
 import UserAvatar from './components/user-avatar.vue';
 
@@ -41,6 +42,7 @@ const { isFullscreen, toggle } = useFullscreen();
     <div class="h-full flex-y-center justify-end">
       <OrgName />
       <GlobalSearch v-if="themeStore.header.globalSearch.visible" />
+      <MessageCenter />
       <FullScreen v-if="!appStore.isMobile" :full="isFullscreen" @click="toggle" />
       <LangSwitch
         v-if="themeStore.header.multilingual.visible"

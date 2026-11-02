@@ -95,6 +95,12 @@ const local: App.I18n.Schema = {
       no: '否'
     }
   },
+  messageCenter: {
+    title: '消息中心',
+    emptyUnread: '暂无未读消息',
+    noMore: '没有更多了',
+    viewAll: '前往消息中心'
+  },
   request: {
     logout: '请求失败后登出用户',
     logoutMsg: '用户状态失效，请重新登录',
@@ -288,6 +294,7 @@ const local: App.I18n.Schema = {
     manage_third: '第三方系统配置',
     'manage_third-template': '第三方模版',
     'manage_msg-template': '消息模版',
+    'msg-center': '消息中心',
     'manage_user-dict': '用户字典',
     'manage_user-detail': '用户详情'
   },
@@ -546,6 +553,14 @@ const local: App.I18n.Schema = {
         createTitle: '新增客户端',
         editTitle: '编辑客户端'
       },
+      msg: {
+        type: '消息类型',
+        content: '消息内容',
+        haveRead: '是否已读',
+        read: '已读',
+        unread: '未读',
+        createTime: '接收时间'
+      },
       msgTemplate: {
         code: '模版编码',
         type: '消息类型',
@@ -571,7 +586,6 @@ const local: App.I18n.Schema = {
         entryLabelDesc: '参数说明',
         entryVal: '默认值',
         entryProp: '字段名',
-        entryColor: '颜色',
         preview: '实时预览',
         previewEmpty: '填写左侧内容后在此预览',
         previewTitlePlaceholder: '未填写标题',

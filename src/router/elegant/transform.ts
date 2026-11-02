@@ -185,7 +185,8 @@ const routeMap: RouteMap = {
   "manage_third-template": "/manage/third-template",
   "manage_user": "/manage/user",
   "manage_user-detail": "/manage/user-detail/:id",
-  "manage_user-dict": "/manage/user-dict"
+  "manage_user-dict": "/manage/user-dict",
+  "msg-center": "/msg-center"
 };
 
 /**

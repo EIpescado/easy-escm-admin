@@ -229,5 +229,14 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       }
     ]
+  },
+  {
+    name: 'msg-center',
+    path: '/msg-center',
+    component: 'layout.base$view.msg-center',
+    meta: {
+      title: 'msg-center',
+      i18nKey: 'route.msg-center'
+    }
   }
 ];

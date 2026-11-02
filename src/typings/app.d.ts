@@ -413,6 +413,12 @@ declare namespace App {
           no: string;
         };
       };
+      messageCenter: {
+        title: string;
+        emptyUnread: string;
+        noMore: string;
+        viewAll: string;
+      };
       request: {
         logout: string;
         logoutMsg: string;
@@ -785,6 +791,14 @@ declare namespace App {
             createTitle: string;
             editTitle: string;
           };
+          msg: {
+            type: string;
+            content: string;
+            haveRead: string;
+            read: string;
+            unread: string;
+            createTime: string;
+          };
           msgTemplate: {
             code: string;
             type: string;
@@ -810,7 +824,6 @@ declare namespace App {
             entryLabelDesc: string;
             entryVal: string;
             entryProp: string;
-            entryColor: string;
             preview: string;
             previewEmpty: string;
             previewTitlePlaceholder: string;

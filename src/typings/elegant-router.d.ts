@@ -40,6 +40,7 @@ declare module "@elegant-router/types" {
     "manage_user": "/manage/user";
     "manage_user-detail": "/manage/user-detail/:id";
     "manage_user-dict": "/manage/user-dict";
+    "msg-center": "/msg-center";
   };
 
   /**
@@ -78,6 +79,7 @@ declare module "@elegant-router/types" {
     | "iframe-page"
     | "login"
     | "manage"
+    | "msg-center"
   >;
 
   /**
@@ -116,6 +118,7 @@ declare module "@elegant-router/types" {
     | "manage_user-detail"
     | "manage_user-dict"
     | "manage_user"
+    | "msg-center"
   >;
 
   /**

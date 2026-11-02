@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import type { FormRules } from 'naive-ui';
 import { fetchCreateMsgTemplate, fetchMsgTemplateDetail, fetchUpdateMsgTemplate } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
@@ -92,11 +92,17 @@ const rules: FormRules = {
   title: defaultRequiredRule
 };
 
-/** new entry of the dynamic input */
-function createEntry(): Api.SystemManage.MsgTemplateEntry {
+/**
+ * New entry of the dynamic input
+ *
+ * `index` is where the row is inserted: a row's add button inserts right after that row (the add
+ * button of an empty list inserts at the top), so the sort number must not be `entries.length + 1`.
+ */
+function createEntry(index: number): Api.SystemManage.MsgTemplateEntry {
   return {
-    sn: entries.value.length + 1,
-    type: null,
+    sn: index + 1,
+    // most parameters are plain text, the type can be switched per row
+    type: 'text',
     label: '',
     labelDesc: '',
     val: '',
@@ -104,6 +110,29 @@ function createEntry(): Api.SystemManage.MsgTemplateEntry {
     color: ''
   };
 }
+
+/** the sort number follows the visible order, so adding / removing a row renumbers the rest */
+function renumberEntries() {
+  entries.value.forEach((entry, index) => {
+    if (entry.sn !== index + 1) entry.sn = index + 1;
+  });
+}
+
+/** sort number input: only digits are accepted, an emptied field is restored by the renumbering */
+function toSortNumber(text: string) {
+  const digits = text.replace(/\D/g, '');
+
+  return digits ? Number(digits) : null;
+}
+
+// the dynamic input has already spliced the row by the time the list is rendered
+watch(
+  () => entries.value.length,
+  async () => {
+    await nextTick();
+    renumberEntries();
+  }
+);
 
 function resetForm() {
   Object.assign(model, createEmptyModel());
@@ -288,61 +317,60 @@ async function handleSubmit() {
             <NRadio :value="false">{{ $t('common.yesOrNo.no') }}</NRadio>
           </NRadioGroup>
         </NFormItem>
-        <NFormItem class="col-span-2">
-          <template #label>
-            <FormLabel :label="$t('page.manage.msgTemplate.entries')" />
-          </template>
-          <NDynamicInput v-model:value="entries" :on-create="createEntry">
-            <template #default="{ value }">
-              <div class="w-full flex flex-col gap-8px">
-                <div class="w-full flex items-center gap-8px">
-                  <NInputNumber
-                    v-model:value="value.sn"
-                    :min="0"
-                    :placeholder="$t('page.manage.msgTemplate.entrySn')"
-                    class="w-100px shrink-0"
-                  />
-                  <RemoteSelect
-                    v-model:value="value.type"
-                    source="dict"
-                    :dict-code="DICT_ENTRY_TYPE"
-                    :placeholder="$t('page.manage.msgTemplate.entryTypePlaceholder')"
-                    class="w-150px shrink-0"
-                  />
-                  <NInput
-                    v-model:value="value.label"
-                    :placeholder="$t('page.manage.msgTemplate.entryLabel')"
-                    class="min-w-0 flex-1"
-                  />
-                  <NInput
-                    v-model:value="value.prop"
-                    :placeholder="$t('page.manage.msgTemplate.entryProp')"
-                    class="min-w-0 flex-1"
-                  />
-                </div>
-                <div class="w-full flex items-center gap-8px">
-                  <NInput
-                    v-model:value="value.val"
-                    :placeholder="$t('page.manage.msgTemplate.entryVal')"
-                    class="min-w-0 flex-1"
-                  />
-                  <NInput
-                    v-model:value="value.labelDesc"
-                    :placeholder="$t('page.manage.msgTemplate.entryLabelDesc')"
-                    class="min-w-0 flex-1"
-                  />
-                  <div class="w-120px shrink-0">
-                    <NInput v-model:value="value.color" :placeholder="$t('page.manage.msgTemplate.entryColor')" />
-                  </div>
-                </div>
-              </div>
-            </template>
-          </NDynamicInput>
-        </NFormItem>
       </div>
 
       <MsgTemplatePreview class="sticky top-0 hidden w-320px shrink-0 xl:block" :model="model" :entries="entries" />
     </div>
+
+    <!-- the parameter row needs the whole dialog width, so it sits below the two-column fields -->
+    <NFormItem class="col-span-2">
+      <template #label>
+        <FormLabel :label="$t('page.manage.msgTemplate.entries')" />
+      </template>
+      <NDynamicInput v-model:value="entries" :on-create="createEntry">
+        <template #default="{ value }">
+          <div class="w-full flex items-center gap-8px">
+            <NInput
+              :value="value.sn === null || value.sn === undefined ? '' : String(value.sn)"
+              :input-props="{ inputmode: 'numeric' }"
+              :placeholder="$t('page.manage.msgTemplate.entrySn')"
+              class="shrink-0"
+              style="width: 64px"
+              @update:value="text => (value.sn = toSortNumber(text))"
+              @blur="renumberEntries"
+            />
+            <RemoteSelect
+              v-model:value="value.type"
+              source="dict"
+              :dict-code="DICT_ENTRY_TYPE"
+              :placeholder="$t('page.manage.msgTemplate.entryTypePlaceholder')"
+              class="shrink-0"
+              style="width: 110px"
+            />
+            <NInput
+              v-model:value="value.label"
+              :placeholder="$t('page.manage.msgTemplate.entryLabel')"
+              class="min-w-0 flex-1"
+            />
+            <NInput
+              v-model:value="value.prop"
+              :placeholder="$t('page.manage.msgTemplate.entryProp')"
+              class="min-w-0 flex-1"
+            />
+            <NInput
+              v-model:value="value.val"
+              :placeholder="$t('page.manage.msgTemplate.entryVal')"
+              class="min-w-0 flex-1"
+            />
+            <NInput
+              v-model:value="value.labelDesc"
+              :placeholder="$t('page.manage.msgTemplate.entryLabelDesc')"
+              class="min-w-0 flex-1"
+            />
+          </div>
+        </template>
+      </NDynamicInput>
+    </NFormItem>
   </FormDialog>
 </template>
 

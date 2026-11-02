@@ -97,30 +97,6 @@ const displayOptions = computed<RemoteSelectOption[]>(() => {
   return [...mergedOptions.value, { label: $t('common.loading'), value: LOADING_VALUE, disabled: true }];
 });
 
-/** dictionary id by code, resolved once per session */
-const dictIdCache = new Map<string, string>();
-
-async function resolveDictId(code: string) {
-  const cached = dictIdCache.get(code);
-
-  if (cached) return cached;
-
-  const { data, error } = await fetchPageSearch<Api.SystemManage.Dict>('/system/dict/search', {
-    page: 1,
-    size: 1,
-    items: [{ prop: 'code', type: 'eq', values: [code] }],
-    orders: []
-  });
-
-  const id = data?.rows?.[0]?.id;
-
-  if (error || !id) return null;
-
-  dictIdCache.set(code, id);
-
-  return id;
-}
-
 /** build the keyword items of a dynamic query: `fast` items are OR-ed by the backend */
 function keywordItems(properties: string[]): Api.SystemManage.QueryItem[] {
   if (!keyword) return [];
@@ -138,14 +114,14 @@ async function fetchOptions(current: number): Promise<FetchResult> {
   const empty = { rows: [], total: 0 };
 
   if (props.source === 'dict') {
-    const dictId = await resolveDictId(props.dictCode);
+    if (!props.dictCode) return empty;
 
-    if (!dictId) return empty;
-
+    // `dictEntry/search` joins the dictionary table as `d`, so the entries are filtered by its code
+    // instead of a `pid` that would first need a dictionary lookup by id
     const { data, error } = await fetchPageSearch<Api.SystemManage.DictEntry>('/system/dictEntry/search', {
       page: current,
       size: PAGE_SIZE,
-      items: [{ prop: 'pid', type: 'eq', values: [dictId] }, ...keywordItems(['code', 'val'])],
+      items: [{ prop: 'code', type: 'eq', values: [props.dictCode], alias: 'd' }, ...keywordItems(['code', 'val'])],
       orders: []
     });
 
