@@ -36,6 +36,10 @@ const local: App.I18n.Schema = {
     },
     specialFile: {
       download: 'Download'
+    },
+    msg: {
+      markRead: 'Mark as Read',
+      markReadAll: 'Mark All as Read'
     }
   },
   common: {
@@ -99,7 +103,9 @@ const local: App.I18n.Schema = {
     title: 'Message Center',
     emptyUnread: 'No unread messages',
     noMore: 'No more messages',
-    viewAll: 'Go to Message Center'
+    viewAll: 'Go to Message Center',
+    markRead: 'Mark as Read',
+    markReadSuccess: 'Marked as read'
   },
   request: {
     logout: 'Logout user after request failed',
@@ -564,7 +570,10 @@ const local: App.I18n.Schema = {
         haveRead: 'Read',
         read: 'Read',
         unread: 'Unread',
-        createTime: 'Received At'
+        createTime: 'Received At',
+        markReadSuccess: 'Marked as read',
+        markReadAllConfirm: 'Mark every unread message as read?',
+        markReadAllSuccess: 'All messages marked as read'
       },
       msgTemplate: {
         code: 'Code',

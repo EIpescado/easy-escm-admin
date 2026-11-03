@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { fetchPageSearch } from '@/service/api';
+import { fetchMarkMsgRead, fetchPageSearch } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
 import { parseMsgContent } from '@/utils/msg';
 import { $t } from '@/locales';
@@ -32,6 +32,12 @@ const messages = ref<Api.SystemManage.SystemMsg[]>([]);
 const loading = ref(false);
 const page = ref(0);
 const total = ref(0);
+
+/** messages whose mark-read request is in flight, so the row cannot be clicked twice */
+const markingIds = ref<string[]>([]);
+
+/** the message under the mouse, its time is swapped for the mark-read action */
+const hoveredId = ref<string | null>(null);
 
 const hasMore = computed(() => messages.value.length < total.value);
 
@@ -79,6 +85,8 @@ function handleOpen() {
 
 // the list is refreshed every time the drawer opens, so new messages show up without a reload
 watch(visible, val => {
+  hoveredId.value = null;
+
   if (!val) return;
 
   messages.value = [];
@@ -92,6 +100,32 @@ async function handleLoadMore() {
   if (!hasMore.value) return;
 
   await load(false);
+}
+
+/** whether the mark-read request of a message is in flight */
+function isMarking(id: string) {
+  return markingIds.value.includes(id);
+}
+
+/** mark one message as read, then drop it from the unread list */
+async function handleMarkRead(message: Api.SystemManage.SystemMsg) {
+  if (isMarking(message.id)) return;
+
+  markingIds.value.push(message.id);
+
+  try {
+    const { error } = await fetchMarkMsgRead(message.id);
+
+    if (error) return;
+
+    window.$message?.success($t('messageCenter.markReadSuccess'));
+
+    // the drawer only lists unread messages, so the item is gone once it has been read
+    messages.value = messages.value.filter(item => item.id !== message.id);
+    total.value = Math.max(0, total.value - 1);
+  } finally {
+    markingIds.value = markingIds.value.filter(id => id !== message.id);
+  }
 }
 
 function goToMessageCenter() {
@@ -125,10 +159,24 @@ function goToMessageCenter() {
             v-for="item in viewMessages"
             :key="item.id"
             class="rounded-6px px-8px py-10px transition-colors hover:bg-#f7f8fa dark:hover:bg-#2a2a2e"
+            @mouseenter="hoveredId = item.id"
+            @mouseleave="hoveredId = null"
           >
             <div class="flex items-baseline gap-8px">
               <span class="min-w-0 flex-1 truncate text-13px font-600" :title="item.heading">{{ item.heading }}</span>
-              <span class="shrink-0 text-12px text-gray-400 dark:text-gray-500">{{ item.createTime }}</span>
+              <div class="flex shrink-0 items-center gap-4px">
+                <NSpin v-if="isMarking(item.id)" :size="12" />
+                <NButton
+                  v-else-if="hoveredId === item.id"
+                  text
+                  size="tiny"
+                  type="primary"
+                  @click.stop="handleMarkRead(item)"
+                >
+                  {{ $t('messageCenter.markRead') }}
+                </NButton>
+                <span v-else class="text-12px text-gray-400 dark:text-gray-500">{{ item.createTime }}</span>
+              </div>
             </div>
             <div v-if="item.subTitle" class="mt-2px text-12px text-gray-500 dark:text-gray-400">
               {{ item.subTitle }}

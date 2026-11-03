@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, h } from 'vue';
+import { computed, h, ref } from 'vue';
 import { NTag } from 'naive-ui';
+import { fetchBatchMarkMsgRead, fetchMarkAllMsgRead, fetchMarkMsgRead } from '@/service/api';
+import type { PageButtonStateRules } from '@/hooks/business/page-buttons';
+import { showConfirmDialog } from '@/utils/common';
 import { $t } from '@/locales';
 import { formatMsgContent } from '@/utils/msg';
 import ManageList from '@/components/advanced/manage-list.vue';
@@ -10,6 +13,17 @@ import type { ManageColumn } from '@/utils/table';
 defineOptions({
   name: 'ManageMsg'
 });
+
+/** the list exposes the checked rows and a reload to the page */
+interface ManageListInstance {
+  getData: () => Promise<void>;
+  selectedRows: Api.SystemManage.SystemMsg[];
+}
+
+const listRef = ref<ManageListInstance | null>(null);
+
+/** a mark-read request is in flight, so further clicks are ignored */
+const markingRead = ref(false);
 
 /**
  * The search SQL joins the message content as `c` (`system_msg_content c`), so a condition on the
@@ -87,16 +101,109 @@ const columns = computed<ManageColumn<Api.SystemManage.SystemMsg>[]>(() => [
 function getColumns() {
   return columns.value;
 }
+
+/**
+ * Button state rules
+ *
+ * `markRead` acts on the checked rows (or a single row when it is used as a row button), so it is
+ * disabled while nothing is selected or everything selected has already been read.
+ */
+const buttonRules: PageButtonStateRules<Api.SystemManage.SystemMsg> = {
+  markRead: ({ rows }) => markingRead.value || rows.every(row => row.haveRead),
+  markReadAll: () => markingRead.value
+};
+
+/** mark the given messages as read, one request for a single row and the batch endpoint otherwise */
+async function markRead(rows: Api.SystemManage.SystemMsg[]) {
+  if (markingRead.value) return;
+
+  // rows that are already read would be a no-op on the backend
+  const ids = rows.filter(row => !row.haveRead).map(row => row.id);
+
+  if (!ids.length) return;
+
+  markingRead.value = true;
+
+  try {
+    const { error } = ids.length === 1 ? await fetchMarkMsgRead(ids[0]) : await fetchBatchMarkMsgRead(ids);
+
+    if (error) return;
+
+    window.$message?.success($t('page.manage.msg.markReadSuccess'));
+
+    // the default filter only keeps unread messages, so the rows disappear after the reload
+    await listRef.value?.getData();
+  } finally {
+    markingRead.value = false;
+  }
+}
+
+/** mark every unread message of the current user as read, after a confirmation */
+function markReadAll() {
+  if (markingRead.value) return;
+
+  showConfirmDialog({
+    content: $t('page.manage.msg.markReadAllConfirm'),
+    positiveText: $t('system.msg.markReadAll'),
+    onConfirm: async () => {
+      markingRead.value = true;
+
+      try {
+        const { error } = await fetchMarkAllMsgRead();
+
+        if (!error) {
+          window.$message?.success($t('page.manage.msg.markReadAllSuccess'));
+          await listRef.value?.getData();
+        }
+      } finally {
+        markingRead.value = false;
+      }
+    }
+  });
+}
+
+/** Toolbar buttons, dispatched by the backend button `click` */
+function handleToolbarAction(button: Api.SystemManage.ButtonNode) {
+  if (button.click === 'markRead') {
+    markRead(listRef.value?.selectedRows ?? []);
+
+    return;
+  }
+
+  if (button.click === 'markReadAll') {
+    markReadAll();
+
+    return;
+  }
+
+  window.$message?.info($t('common.lookForward'));
+}
+
+/** Row action handlers, dispatched by the backend button `click` */
+function handleRowAction(row: Api.SystemManage.SystemMsg, click: string) {
+  if (click === 'markRead') {
+    markRead([row]);
+
+    return;
+  }
+
+  window.$message?.info($t('common.lookForward'));
+}
 </script>
 
 <template>
   <div class="min-h-0 flex flex-1 overflow-hidden">
     <ManageList
+      ref="listRef"
       table-key="manage_msg"
       class="min-h-0 flex-1"
       url="/system/msg/search"
       :fields="searchFields"
       :columns="getColumns"
+      :button-rules="buttonRules"
+      :row-action="handleRowAction"
+      selection
+      @toolbar-action="handleToolbarAction"
     />
   </div>
 </template>

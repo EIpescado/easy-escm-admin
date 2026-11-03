@@ -380,6 +380,21 @@ export function fetchToggleClientState(id: string, enable: boolean) {
   });
 }
 
+/** mark one system message as read */
+export function fetchMarkMsgRead(id: string) {
+  return request<string>({ url: '/system/msg/markRead', method: 'post', data: { id } });
+}
+
+/** mark the given system messages as read */
+export function fetchBatchMarkMsgRead(ids: string[]) {
+  return request<string>({ url: '/system/msg/batchMarkRead', method: 'post', data: ids });
+}
+
+/** mark every unread message of the current user as read */
+export function fetchMarkAllMsgRead() {
+  return request<string>({ url: '/system/msg/markReadAll', method: 'post' });
+}
+
 /** get a message template detail (includes its entries) */
 export function fetchMsgTemplateDetail(id: string) {
   return request<Api.SystemManage.MsgTemplate>({ url: '/system/msgTemplate/detail', method: 'post', data: { id } });

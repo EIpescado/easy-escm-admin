@@ -355,6 +355,10 @@ declare namespace App {
         specialFile: {
           download: string;
         };
+        msg: {
+          markRead: string;
+          markReadAll: string;
+        };
       };
       common: {
         action: string;
@@ -418,6 +422,8 @@ declare namespace App {
         emptyUnread: string;
         noMore: string;
         viewAll: string;
+        markRead: string;
+        markReadSuccess: string;
       };
       request: {
         logout: string;
@@ -798,6 +804,9 @@ declare namespace App {
             read: string;
             unread: string;
             createTime: string;
+            markReadSuccess: string;
+            markReadAllConfirm: string;
+            markReadAllSuccess: string;
           };
           msgTemplate: {
             code: string;

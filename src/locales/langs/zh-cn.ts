@@ -36,6 +36,10 @@ const local: App.I18n.Schema = {
     },
     specialFile: {
       download: '下载'
+    },
+    msg: {
+      markRead: '标记已读',
+      markReadAll: '全部标记已读'
     }
   },
   common: {
@@ -99,7 +103,9 @@ const local: App.I18n.Schema = {
     title: '消息中心',
     emptyUnread: '暂无未读消息',
     noMore: '没有更多了',
-    viewAll: '前往消息中心'
+    viewAll: '前往消息中心',
+    markRead: '标记已读',
+    markReadSuccess: '已标记为已读'
   },
   request: {
     logout: '请求失败后登出用户',
@@ -559,7 +565,10 @@ const local: App.I18n.Schema = {
         haveRead: '是否已读',
         read: '已读',
         unread: '未读',
-        createTime: '接收时间'
+        createTime: '接收时间',
+        markReadSuccess: '标记已读成功',
+        markReadAllConfirm: '确认将全部未读消息标记为已读？',
+        markReadAllSuccess: '已全部标记为已读'
       },
       msgTemplate: {
         code: '模版编码',
